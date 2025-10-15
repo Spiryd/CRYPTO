@@ -8,14 +8,17 @@ Minimal Rust implementation of MD5 for learning and experimentation only.
 
 Hash some bytes:
 ```rust
-use l1::md5;
-let h = md5(b"hello");
-assert_eq!(h, "5d41402abc4b2a76b9719d911017c592");
+use l1::{md5, md5_to_hex};
+let hash = md5(b"hello");
+let hex = md5_to_hex(&hash);
+assert_eq!(hex, "5d41402abc4b2a76b9719d911017c592");
 ```
 
-Run demo:
+Run examples:
 ```bash
-cargo run
+cargo run --example demo               # Basic MD5 demonstration
+cargo run --example perf_test -r       # Sequential performance analysis
+cargo run --example perf_parallel -r   # Parallel performance (Rayon)
 ```
 
 Run tests (includes comparison against a reference implementation):

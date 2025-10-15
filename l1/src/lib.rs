@@ -315,14 +315,14 @@ fn convert_u8_chunk_to_u32(chunk: &mut [u8]) -> Vec<u32> {
 /// 1. Initialize MD buffer with RFC 1321 constants
 /// 2. Process each 512-bit block through 4 rounds (64 operations total)
 /// 3. Add the original buffer values (Davies-Meyer construction)
-/// 4. Format the final 128-bit result as hexadecimal
-fn compute_md5_digest(mut v: Vec<u8>) -> String {
+/// 4. Return the final 128-bit result as a byte array
+fn compute_md5_digest(mut v: Vec<u8>) -> [u8; 16] {
     // RFC 1321 specified initialization vectors
     // These provide the initial hash state
-    let mut word_a = 0x67452301u32;
-    let mut word_b = 0xefcdab89u32;
-    let mut word_c = 0x98badcfeu32;
-    let mut word_d = 0x10325476u32;
+    let mut word_a: u32 = 0x67452301;
+    let mut word_b: u32 = 0xefcdab89;
+    let mut word_c: u32 = 0x98badcfe;
+    let mut word_d: u32 = 0x10325476;
 
     // Generate the 64-element constant table
     let table = construct_value_table();
@@ -369,15 +369,13 @@ fn compute_md5_digest(mut v: Vec<u8>) -> String {
         word_d = word_d.wrapping_add(word_dd);
     }
 
-    // Format as 128-bit hexadecimal string (little-endian byte order)
-    let message_digest = format!(
-        "{:08x}{:08x}{:08x}{:08x}",
-        word_a.swap_bytes(),
-        word_b.swap_bytes(),
-        word_c.swap_bytes(),
-        word_d.swap_bytes()
-    );
-    message_digest
+    // Return as 128-bit byte array (little-endian byte order)
+    let mut result = [0u8; 16];
+    result[0..4].copy_from_slice(&word_a.swap_bytes().to_be_bytes());
+    result[4..8].copy_from_slice(&word_b.swap_bytes().to_be_bytes());
+    result[8..12].copy_from_slice(&word_c.swap_bytes().to_be_bytes());
+    result[12..16].copy_from_slice(&word_d.swap_bytes().to_be_bytes());
+    result
 }
 
 /// Apply MD5 padding to the input message.
@@ -451,15 +449,17 @@ fn construct_value_table() -> Vec<u32> {
 ///
 /// # Returns
 ///
-/// A 32-character hexadecimal string representing the 128-bit MD5 hash
+/// A 16-byte array representing the 128-bit MD5 hash
 ///
 /// # Example
 ///
 /// ```rust
-/// use l1::md5;
+/// use l1::{md5, md5_to_hex};
 ///
 /// let hash = md5(b"Hello, world!");
-/// println!("MD5: {}", hash);
+/// println!("MD5: {}", md5_to_hex(&hash));
+/// // Or use raw bytes for comparison, etc.
+/// assert_eq!(hash.len(), 16);
 /// ```
 ///
 /// # Educational Use
@@ -476,7 +476,31 @@ fn construct_value_table() -> Vec<u32> {
 ///
 /// MD5 is broken and has known collision attacks. This implementation
 /// exists solely for educational purposes in cryptography courses.
-pub fn md5(input: &[u8]) -> String {
+pub fn md5(input: &[u8]) -> [u8; 16] {
     let input_vec = bit_padding(input);
     compute_md5_digest(input_vec)
+}
+
+/// Convert MD5 hash bytes to hexadecimal string.
+///
+/// # Parameters
+///
+/// * `hash` - A 16-byte MD5 hash
+///
+/// # Returns
+///
+/// A 32-character lowercase hexadecimal string
+///
+/// # Example
+///
+/// ```rust
+/// use l1::{md5, md5_to_hex};
+///
+/// let hash = md5(b"abc");
+/// assert_eq!(md5_to_hex(&hash), "900150983cd24fb0d6963f7d28e17f72");
+/// ```
+pub fn md5_to_hex(hash: &[u8; 16]) -> String {
+    hash.iter()
+        .map(|byte| format!("{:02x}", byte))
+        .collect()
 }

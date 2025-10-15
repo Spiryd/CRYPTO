@@ -1,4 +1,4 @@
-use l1::md5;
+use l1::{md5, md5_to_hex};
 
 /// Comprehensive comparison tests between our MD5 implementation and the official md5 crate.
 /// This ensures our educational implementation produces identical results to the reference implementation.
@@ -9,7 +9,7 @@ mod comparison_tests {
 
     /// Helper function to compare our implementation with the reference md5 crate
     fn compare_implementations(input: &[u8]) {
-        let our_result = md5(input);
+        let our_result = md5_to_hex(&md5(input));
         let reference_result = format!("{:x}", reference_md5::compute(input));
 
         assert_eq!(
@@ -257,7 +257,7 @@ mod comparison_tests {
         ];
 
         for hash in &known_hashes {
-            let our_result = md5(hash.input);
+            let our_result = md5_to_hex(&md5(hash.input));
             let ref_result = format!("{:x}", reference_md5::compute(hash.input));
 
             assert_eq!(
@@ -298,7 +298,7 @@ mod comparison_tests {
 
         println!("✓ RFC 1321 Test Vectors:");
         for (input, expected) in &rfc_vectors {
-            let our_result = md5(input.as_bytes());
+            let our_result = md5_to_hex(&md5(input.as_bytes()));
             let ref_result = format!("{:x}", reference_md5::compute(input.as_bytes()));
 
             assert_eq!(our_result, *expected);
@@ -318,7 +318,7 @@ mod comparison_tests {
 
         for (length, description) in &boundary_cases {
             let input = "A".repeat(*length);
-            let our_result = md5(input.as_bytes());
+            let our_result = md5_to_hex(&md5(input.as_bytes()));
             let ref_result = format!("{:x}", reference_md5::compute(input.as_bytes()));
 
             assert_eq!(our_result, ref_result);
@@ -334,7 +334,7 @@ mod comparison_tests {
         ];
 
         for (input, description) in &binary_tests {
-            let our_result = md5(input);
+            let our_result = md5_to_hex(&md5(input));
             let ref_result = format!("{:x}", reference_md5::compute(input));
 
             assert_eq!(our_result, ref_result);

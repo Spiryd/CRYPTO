@@ -11,4 +11,11 @@ path = "src/lib.rs"
 [dependencies]
 wgpu = "27.0.1"
 reference_md5 = { package = "md5", version = "0.8.0" }
-dialoguer = "0.12.0"
+rayon = "1.10"
+
+[dev-dependencies]
+criterion = { version = "0.7.0", features = ["html_reports"] }
+
+[[bench]]
+name = "md5_benchmark"
+harness = false
