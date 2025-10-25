@@ -12,6 +12,12 @@ path = "src/lib.rs"
 wgpu = "27.0.1"
 reference_md5 = { package = "md5", version = "0.8.0" }
 rayon = "1.10"
+bytemuck = { version = "1.24.0", features = ["derive"] }
+pollster = "0.4.0"
+rand = "0.9.2"
+flume = "0.11"
+log = "0.4"
+env_logger = "0.11"
 
 [dev-dependencies]
 criterion = { version = "0.7.0", features = ["html_reports"] }
