@@ -2,7 +2,6 @@ use l1::{md5, md5_to_hex};
 
 /// Comprehensive comparison tests between our MD5 implementation and the official md5 crate.
 /// This ensures our educational implementation produces identical results to the reference implementation.
-
 #[cfg(test)]
 mod comparison_tests {
     use super::*;

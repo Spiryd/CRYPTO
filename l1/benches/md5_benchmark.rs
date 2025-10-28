@@ -1,7 +1,6 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use std::hint::black_box;
 use l1::md5;
-use reference_md5;
 
 fn bench_our_md5(c: &mut Criterion) {
     let data = b"The quick brown fox jumps over the lazy dog";

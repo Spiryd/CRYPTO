@@ -30,7 +30,7 @@ use std::convert::TryInto;
 
 /// Generate the MD5 constant table using the sine function as specified in RFC 1321.
 ///
-/// The MD5 algorithm uses a 64-element table T where T[i] = floor(2^32 * abs(sin(i+1))).
+/// The MD5 algorithm uses a 64-element table T where T\[i\] = floor(2^32 * abs(sin(i+1))).
 /// This provides a "random" but reproducible set of constants for the hash rounds.
 ///
 /// # Mathematical Background
@@ -99,7 +99,7 @@ fn vec_to_array<T, const N: usize>(v: Vec<T>) -> [T; N] {
 ///
 /// Round 1 uses auxiliary function F and specific shift amounts.
 /// Each operation follows the pattern:
-/// a = b + ((a + F(b,c,d) + X[k] + T[i]) <<< s)
+/// a = b + ((a + F(b,c,d) + X\[k\] + T\[i\]) <<< s)
 ///
 /// # Security Note
 ///
@@ -305,6 +305,38 @@ fn convert_u8_chunk_to_u32(chunk: &mut [u8]) -> Vec<u32> {
     x
 }
 
+/// Initial values for MD5 hash state.
+///
+/// These are the RFC 1321 specified initialization vectors.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct InitialValues {
+    pub a: u32,
+    pub b: u32,
+    pub c: u32,
+    pub d: u32,
+}
+
+impl InitialValues {
+    /// RFC 1321 standard initial values (correct MD5)
+    pub const STANDARD: Self = Self {
+        a: 0x67452301,
+        b: 0xefcdab89,
+        c: 0x98badcfe,
+        d: 0x10325476,
+    };
+
+    /// Custom initial values for collision research
+    pub const fn custom(a: u32, b: u32, c: u32, d: u32) -> Self {
+        Self { a, b, c, d }
+    }
+}
+
+impl Default for InitialValues {
+    fn default() -> Self {
+        Self::STANDARD
+    }
+}
+
 /// Core MD5 digest computation function.
 ///
 /// This function processes the padded message in 512-bit blocks and applies
@@ -312,17 +344,16 @@ fn convert_u8_chunk_to_u32(chunk: &mut [u8]) -> Vec<u32> {
 ///
 /// # Algorithm Overview
 ///
-/// 1. Initialize MD buffer with RFC 1321 constants
+/// 1. Initialize MD buffer with provided initial values
 /// 2. Process each 512-bit block through 4 rounds (64 operations total)
 /// 3. Add the original buffer values (Davies-Meyer construction)
 /// 4. Return the final 128-bit result as a byte array
-fn compute_md5_digest(mut v: Vec<u8>) -> [u8; 16] {
-    // RFC 1321 specified initialization vectors
-    // These provide the initial hash state
-    let mut word_a: u32 = 0x67452301;
-    let mut word_b: u32 = 0xefcdab89;
-    let mut word_c: u32 = 0x98badcfe;
-    let mut word_d: u32 = 0x10325476;
+pub(crate) fn compute_md5_digest_with_iv(mut v: Vec<u8>, iv: InitialValues) -> [u8; 16] {
+    // Initialize with provided values
+    let mut word_a: u32 = iv.a;
+    let mut word_b: u32 = iv.b;
+    let mut word_c: u32 = iv.c;
+    let mut word_d: u32 = iv.d;
 
     // Generate the 64-element constant table
     let table = construct_value_table();
@@ -378,6 +409,70 @@ fn compute_md5_digest(mut v: Vec<u8>) -> [u8; 16] {
     result
 }
 
+/// Process a single raw 512-bit MD5 block without padding.
+///
+/// This function is used for collision analysis where message blocks
+/// are provided as pre-formatted 16-word (64-byte) chunks.
+///
+/// # Arguments
+/// * `iv` - Initial values (chaining variable from previous block or standard IV)
+/// * `block_words` - 16 u32 words representing a 512-bit block
+///
+/// # Returns
+/// The resulting MD5 state as [u32; 4]
+pub fn process_raw_block(iv: InitialValues, block_words: &[u32; 16]) -> InitialValues {
+    let mut word_a = iv.a;
+    let mut word_b = iv.b;
+    let mut word_c = iv.c;
+    let mut word_d = iv.d;
+
+    let table = construct_value_table();
+
+    // Save original values
+    let word_aa = word_a;
+    let word_bb = word_b;
+    let word_cc = word_c;
+    let word_dd = word_d;
+
+    // Execute the four rounds with the provided words
+    let result = round_one_operations(word_a, word_b, word_c, word_d, &table, block_words);
+    word_a = result[0];
+    word_b = result[1];
+    word_c = result[2];
+    word_d = result[3];
+
+    let result = round_two_operations(word_a, word_b, word_c, word_d, &table, block_words);
+    word_a = result[0];
+    word_b = result[1];
+    word_c = result[2];
+    word_d = result[3];
+
+    let result = round_three_operations(word_a, word_b, word_c, word_d, &table, block_words);
+    word_a = result[0];
+    word_b = result[1];
+    word_c = result[2];
+    word_d = result[3];
+
+    let result = round_four_operations(word_a, word_b, word_c, word_d, &table, block_words);
+    word_a = result[0];
+    word_b = result[1];
+    word_c = result[2];
+    word_d = result[3];
+
+    // Davies-Meyer construction
+    word_a = word_a.wrapping_add(word_aa);
+    word_b = word_b.wrapping_add(word_bb);
+    word_c = word_c.wrapping_add(word_cc);
+    word_d = word_d.wrapping_add(word_dd);
+
+    InitialValues {
+        a: word_a,
+        b: word_b,
+        c: word_c,
+        d: word_d,
+    }
+}
+
 /// Apply MD5 padding to the input message.
 ///
 /// # Padding Algorithm (RFC 1321)
@@ -391,7 +486,7 @@ fn compute_md5_digest(mut v: Vec<u8>) -> [u8; 16] {
 /// The padding scheme ensures messages are always a multiple of 512 bits,
 /// but also creates vulnerabilities exploited in length extension attacks
 /// and collision generation techniques.
-fn bit_padding(input: &[u8]) -> Vec<u8> {
+pub(crate) fn bit_padding(input: &[u8]) -> Vec<u8> {
     let mut input_vector: Vec<u8> = input.to_vec();
     let bit_length: u64 = (input.len() as u64) * 8u64;
 
@@ -441,7 +536,8 @@ fn construct_value_table() -> Vec<u32> {
 
 /// Compute the MD5 hash of a byte slice.
 ///
-/// This is the main public interface for the MD5 hash function.
+/// This is the main public interface for the MD5 hash function using
+/// RFC 1321 standard initial values.
 ///
 /// # Parameters
 ///
@@ -475,8 +571,46 @@ fn construct_value_table() -> Vec<u32> {
 /// MD5 is broken and has known collision attacks. This implementation
 /// exists solely for educational purposes in cryptography courses.
 pub fn hash(input: &[u8]) -> [u8; 16] {
+    hash_with_iv(input, InitialValues::STANDARD)
+}
+
+/// Compute MD5 hash with custom initial values.
+///
+/// This function allows specifying custom initial values for the MD5 hash state,
+/// which is useful for studying collision attacks and differential cryptanalysis.
+///
+/// # Parameters
+///
+/// * `input` - A byte slice containing the data to hash
+/// * `iv` - Initial values for the hash state (A, B, C, D)
+///
+/// # Returns
+///
+/// A 16-byte array representing the 128-bit hash
+///
+/// # Example
+///
+/// ```rust
+/// use l1::md5::{hash_with_iv, InitialValues};
+///
+/// // Standard MD5
+/// let standard = hash_with_iv(b"test", InitialValues::STANDARD);
+///
+/// // Custom initial values for research
+/// let custom_iv = InitialValues::custom(0x12345678, 0x9abcdef0, 0x11111111, 0x22222222);
+/// let custom = hash_with_iv(b"test", custom_iv);
+/// ```
+///
+/// # Educational Use
+///
+/// Custom initial values are useful for:
+/// - Studying how initial values affect collision resistance
+/// - Implementing multi-block collision attacks
+/// - Differential cryptanalysis research
+/// - Understanding the Davies-Meyer construction
+pub fn hash_with_iv(input: &[u8], iv: InitialValues) -> [u8; 16] {
     let input_vec = bit_padding(input);
-    compute_md5_digest(input_vec)
+    compute_md5_digest_with_iv(input_vec, iv)
 }
 
 /// Convert MD5 hash bytes to hexadecimal string.

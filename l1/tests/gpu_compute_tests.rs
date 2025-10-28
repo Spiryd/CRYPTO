@@ -201,7 +201,7 @@ fn test_pipeline_reuse() {
             let output = pipeline
                 .execute(&ctx, &input)
                 .await
-                .expect(&format!("Failed on run {}", run));
+                .unwrap_or_else(|_| panic!("Failed on run {}", run));
 
             assert_eq!(output.len(), 3);
             assert!((output[0] - 1.0).abs() < 0.001);

@@ -1,9 +1,67 @@
-use l1::{md5, md5_to_hex};
+use l1::{md5, md5_to_hex, md5_with_iv, InitialValues};
 
 #[test]
 fn test_empty_input() {
     let result = md5_to_hex(&md5(b""));
     assert_eq!(result, "d41d8cd98f00b204e9800998ecf8427e");
+}
+
+#[test]
+fn test_custom_initial_values() {
+    let input = b"test";
+    
+    // Standard IV should produce standard MD5
+    let standard = md5(input);
+    let with_standard_iv = md5_with_iv(input, InitialValues::STANDARD);
+    assert_eq!(standard, with_standard_iv, "Standard IV should match regular md5()");
+    
+    // Custom IV should produce different result
+    let custom_iv = InitialValues::custom(0x12345678, 0x9abcdef0, 0x11111111, 0x22222222);
+    let with_custom_iv = md5_with_iv(input, custom_iv);
+    assert_ne!(standard, with_custom_iv, "Custom IV should produce different hash");
+    
+    // Same custom IV should be deterministic
+    let with_custom_iv2 = md5_with_iv(input, custom_iv);
+    assert_eq!(with_custom_iv, with_custom_iv2, "Custom IV should be deterministic");
+}
+
+#[test]
+fn test_initial_values_struct() {
+    // Test standard IV
+    let standard = InitialValues::STANDARD;
+    assert_eq!(standard.a, 0x67452301);
+    assert_eq!(standard.b, 0xefcdab89);
+    assert_eq!(standard.c, 0x98badcfe);
+    assert_eq!(standard.d, 0x10325476);
+    
+    // Test custom IV
+    let custom = InitialValues::custom(1, 2, 3, 4);
+    assert_eq!(custom.a, 1);
+    assert_eq!(custom.b, 2);
+    assert_eq!(custom.c, 3);
+    assert_eq!(custom.d, 4);
+    
+    // Test default
+    let default = InitialValues::default();
+    assert_eq!(default, InitialValues::STANDARD);
+}
+
+#[test]
+fn test_different_ivs_different_outputs() {
+    let input = b"collision research";
+    
+    let iv1 = InitialValues::custom(0x00000000, 0x00000000, 0x00000000, 0x00000000);
+    let iv2 = InitialValues::custom(0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff);
+    let iv3 = InitialValues::STANDARD;
+    
+    let hash1 = md5_with_iv(input, iv1);
+    let hash2 = md5_with_iv(input, iv2);
+    let hash3 = md5_with_iv(input, iv3);
+    
+    // All should be different
+    assert_ne!(hash1, hash2);
+    assert_ne!(hash2, hash3);
+    assert_ne!(hash1, hash3);
 }
 
 #[test]

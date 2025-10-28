@@ -1,8 +1,9 @@
 fn main() {
-    println!("TODO: Main application entry point");
-    println!();
-    println!("Run examples instead:");
-    println!("  cargo run --example demo               # Basic MD5 demo");
-    println!("  cargo run --example perf_test -r       # Sequential performance");
-    println!("  cargo run --example perf_parallel -r   # Parallel performance");
+    println!("L1 Cryptography Library");
+    println!("\nExamples:");
+    println!("  cargo run --example verify_wang_collision  # Verify MD5 collisions from Wang et al.");
+    println!("  cargo run --example simple_compute         # GPU compute demo");
+    println!("\nTests:");
+    println!("  cargo test                                 # Run all tests");
+    println!("  cargo bench                                # Run benchmarks");
 }
