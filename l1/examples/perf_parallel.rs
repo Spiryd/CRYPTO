@@ -1,6 +1,6 @@
 use std::time::Instant;
 use rayon::prelude::*;
-use l1::md5;
+use l1::{md5, print_box};
 
 fn main() {
     println!("=== Parallel MD5 Performance Test (using Rayon) ===\n");
@@ -30,10 +30,7 @@ fn main() {
     // ═══════════════════════════════════════════════════════════
     // Sequential Tests (baseline)
     // ═══════════════════════════════════════════════════════════
-    println!("╔═══════════════════════════════════════════════╗");
-    println!("║     SEQUENTIAL (Single-threaded Baseline)     ║");
-    println!("╚═══════════════════════════════════════════════╝");
-    println!();
+    print_box("SEQUENTIAL (Single-threaded Baseline)");
     
     println!("Our implementation (sequential):");
     let start = Instant::now();
@@ -64,10 +61,7 @@ fn main() {
     // ═══════════════════════════════════════════════════════════
     // Parallel Tests (using Rayon)
     // ═══════════════════════════════════════════════════════════
-    println!("╔═══════════════════════════════════════════════╗");
-    println!("║     PARALLEL (Multi-threaded with Rayon)      ║");
-    println!("╚═══════════════════════════════════════════════╝");
-    println!();
+    print_box("PARALLEL (Multi-threaded with Rayon)");
     
     println!("Our implementation (parallel on {} cores):", num_threads);
     let start = Instant::now();
@@ -108,10 +102,7 @@ fn main() {
     // ═══════════════════════════════════════════════════════════
     // Extrapolation to 2^40
     // ═══════════════════════════════════════════════════════════
-    println!("╔═══════════════════════════════════════════════╗");
-    println!("║       Extrapolation to 2^40 Operations        ║");
-    println!("╚═══════════════════════════════════════════════╝");
-    println!();
+    print_box("Extrapolation to 2^40 Operations");
     
     let target = 1u64 << 40;
     println!("2^40 = {} hashes", format_number(target));
@@ -140,10 +131,7 @@ fn main() {
     // ═══════════════════════════════════════════════════════════
     // Improvement Summary
     // ═══════════════════════════════════════════════════════════
-    println!("╔═══════════════════════════════════════════════╗");
-    println!("║            Parallelization Impact             ║");
-    println!("╚═══════════════════════════════════════════════╝");
-    println!();
+    print_box("Parallelization Impact");
     
     let our_speedup = our_seq_time_2_40 / our_par_time_2_40;
     let ref_speedup = ref_seq_time_2_40 / ref_par_time_2_40;
@@ -166,10 +154,7 @@ fn main() {
     // ═══════════════════════════════════════════════════════════
     // Cryptographic Context
     // ═══════════════════════════════════════════════════════════
-    println!("╔═══════════════════════════════════════════════╗");
-    println!("║                 Implications                  ║");
-    println!("╚═══════════════════════════════════════════════╝");
-    println!();
+    print_box("Implications");
     
     println!("Wang et al. collision attack (2004): ~2^39 MD5 calculations");
     let wang_ops = 1u64 << 39;

@@ -1,31 +1,3 @@
-//! MD5 Hash Function Implementation
-//!
-//! This is an educational implementation of the MD5 message-digest algorithm
-//! as specified in RFC 1321. This implementation is designed for cryptography
-//! students studying hash function vulnerabilities and collision attacks.
-//!
-//! ## ⚠️ Security Warning
-//!
-//! MD5 is cryptographically broken and unsuitable for further use. This
-//! implementation is specifically created for educational purposes to demonstrate:
-//! - Hash function internals and implementation details
-//! - Vulnerabilities discovered by Xiaoyun Wang et al. in 2004
-//! - Collision attack techniques on weak hash functions
-//!
-//! ## References
-//!
-//! - RFC 1321: The MD5 Message-Digest Algorithm
-//! - Xiaoyun Wang et al. "Collisions for Hash Functions MD4, MD5, HAVAL-128 and RIPEMD" (2004)
-//! - Xiaoyun Wang and Hongbo Yu. "How to Break MD5 and Other Hash Functions"
-//!
-//! ## Implementation Notes
-//!
-//! This implementation follows RFC 1321 exactly and is designed to be:
-//! - Educational and easy to understand
-//! - Byte-oriented (works with `&[u8]` input)
-//! - Well-documented for learning purposes
-//! - Suitable for collision attack research
-
 use std::convert::TryInto;
 
 /// Generate the MD5 constant table using the sine function as specified in RFC 1321.
@@ -600,14 +572,6 @@ pub fn hash(input: &[u8]) -> [u8; 16] {
 /// let custom_iv = InitialValues::custom(0x12345678, 0x9abcdef0, 0x11111111, 0x22222222);
 /// let custom = hash_with_iv(b"test", custom_iv);
 /// ```
-///
-/// # Educational Use
-///
-/// Custom initial values are useful for:
-/// - Studying how initial values affect collision resistance
-/// - Implementing multi-block collision attacks
-/// - Differential cryptanalysis research
-/// - Understanding the Davies-Meyer construction
 pub fn hash_with_iv(input: &[u8], iv: InitialValues) -> [u8; 16] {
     let input_vec = bit_padding(input);
     compute_md5_digest_with_iv(input_vec, iv)

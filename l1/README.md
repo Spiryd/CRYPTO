@@ -1,58 +1,59 @@
-# L1 - Cryptography Learning Library
+# MD5 Cryptanalysis
 
-Educational Rust implementations of MD5 and GPU compute.
+GPU-accelerated Wang's MD5 collision attack in Rust/WGPU.
 
-> ⚠️ **Educational Only**: MD5 is cryptographically broken.
+**Educational Only** - MD5 is cryptographically broken.
 
-## Features
+## Tasks
 
-- MD5 hash function with collision verification
-- GPU compute using WGPU
-- Wang et al. collision examples
+**Task 1: MD5 Implementation**
+- Pure Rust MD5 (RFC 1321)
+- Custom IV support
+- `cargo run --example demo`
 
-## Usage
+**Task 2: Known Collision Verification**
+- Wang's collision constants
+- `cargo run --release --example verify_known_collisions`
 
-### MD5
-```rust
-use l1::{md5, md5_to_hex};
+**Task 3: Phase 2 GPU Collision Search**
+- GPU-accelerated search (WGPU/WGSL)
+- Wang's differential path
+- `cargo run --release --example test_phase2`
 
-let hash = md5(b"hello");
-assert_eq!(md5_to_hex(&hash), "5d41402abc4b2a76b9719d911017c592");
-```
-
-### GPU Compute
-```rust
-use l1::gpu::{GpuContext, ComputePipeline};
-
-let ctx = GpuContext::new().await?;
-let shader = include_str!("shader.wgsl");
-let pipeline = ComputePipeline::new(&ctx, shader, "main")?;
-let output = pipeline.execute(&ctx, &[1.0, 2.0, 3.0]).await?;
-```
-
-## Examples
+## Quick Start
 
 ```bash
-cargo run --example verify_wang_collision  # MD5 collision verification
-cargo run --example simple_compute         # GPU compute demo
-cargo test                                 # Run tests
-cargo bench                                # Run benchmarks
+# Run all tests
+cargo test
+
+# Build and run
+cargo build --release
+cargo run --release --example test_phase2
 ```
 
 ## Structure
 
 ```
 src/
-├── md5/        # MD5 implementation
-├── gpu/        # GPU compute
-└── collision/  # Collision verification
-examples/       # Example programs
-tests/          # Tests
-benches/        # Benchmarks
+├── md5/mod.rs                  # Task 1: MD5 algorithm
+├── collision.rs                # Task 2 & 3: Collision search
+└── gpu/shaders/collision_search.wgsl  # Task 3: GPU shader
+
+examples/
+├── demo.rs                     # Task 1 demo
+├── verify_known_collisions.rs # Task 2
+└── test_phase2.rs              # Task 3
 ```
+
+## Status
+
+✅ Task 1: Complete (16 tests)  
+✅ Task 2: Complete (10 tests)  
+✅ Task 3: :<
+
 
 ## References
 
-- RFC 1321: MD5 Message-Digest Algorithm
-- Wang et al. "How to Break MD5 and Other Hash Functions" (2005)
-- [WGPU Documentation](https://wgpu.rs/)
+- Wang et al. (2005) - "How to Break MD5 and Other Hash Functions"
+- RFC 1321 - MD5 Message-Digest Algorithm
+- WGPU - https://wgpu.rs/

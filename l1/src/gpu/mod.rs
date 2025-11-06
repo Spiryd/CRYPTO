@@ -44,6 +44,8 @@ pub enum GpuError {
     ShaderError(String),
     /// Buffer operation error
     BufferError(String),
+    /// Validation error
+    ValidationError(String),
     /// General WGPU error
     WgpuError(String),
 }
@@ -55,6 +57,7 @@ impl std::fmt::Display for GpuError {
             GpuError::DeviceCreation(msg) => write!(f, "Device creation failed: {}", msg),
             GpuError::ShaderError(msg) => write!(f, "Shader error: {}", msg),
             GpuError::BufferError(msg) => write!(f, "Buffer operation failed: {}", msg),
+            GpuError::ValidationError(msg) => write!(f, "Validation error: {}", msg),
             GpuError::WgpuError(msg) => write!(f, "WGPU error: {}", msg),
         }
     }

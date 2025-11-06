@@ -1,8 +1,3 @@
-//! Simple GPU compute example using the clean L1 API
-//!
-//! This example demonstrates how to use the GPU compute capabilities
-//! to square an array of numbers.
-
 use l1::gpu::{GpuContext, ComputePipeline};
 use pollster::FutureExt;
 
