@@ -184,7 +184,7 @@ async fn second_step() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         
-        // Progress update every loop (like C code)
+        // Progress update every loop
         let elapsed = search_start.elapsed().as_secs_f64();
         let attempts = (loop_count * batch_size as u64 * iterations as u64) as f64 / 1e9;
         let rate = attempts / elapsed;

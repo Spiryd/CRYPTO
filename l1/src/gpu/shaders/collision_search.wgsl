@@ -1,16 +1,3 @@
-//! Wang's MD5 Collision Attack - GPU Candidate Generation
-//!
-//! This shader implements the differential path conditions from Wang et al.'s
-//! 2005 attack on MD5. It generates and validates collision candidates by:
-//! 1. Generating random message blocks
-//! 2. Applying bit conditions from rounds 1-2 via message modification
-//! 3. Verifying conditions in rounds 2-4
-//! 4. Returning candidates that satisfy all differential path requirements
-//!
-//! References:
-//! - Wang et al., "How to Break MD5 and Other Hash Functions" (2005)
-//! - Stevens, "Single-Block Collision Attack on MD5" (2012)
-
 // ============================================================================
 // MD5 Constants
 // ============================================================================

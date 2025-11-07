@@ -527,21 +527,6 @@ fn construct_value_table() -> Vec<u32> {
 /// let result = hash(b"Hello, world!");
 /// assert_eq!(result.len(), 16);
 /// ```
-///
-/// # Educational Use
-///
-/// This implementation is designed for studying:
-/// - Hash function construction and properties
-/// - Merkle-Damgård construction vulnerabilities
-/// - Collision attack techniques (Wang et al., 2004)
-/// - Differential cryptanalysis of hash functions
-///
-/// # Security Note
-///
-/// **DO NOT USE FOR CRYPTOGRAPHIC PURPOSES**
-///
-/// MD5 is broken and has known collision attacks. This implementation
-/// exists solely for educational purposes in cryptography courses.
 pub fn hash(input: &[u8]) -> [u8; 16] {
     hash_with_iv(input, InitialValues::STANDARD)
 }

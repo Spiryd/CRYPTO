@@ -2,7 +2,7 @@ use l1::gpu::{GpuContext, ComputePipeline};
 use pollster::FutureExt;
 
 async fn run_compute() -> Result<(), Box<dyn std::error::Error>> {
-    // 1. Initialize GPU context (one line!)
+    // 1. Initialize GPU context
     println!("Initializing GPU...");
     let ctx = GpuContext::new().await?;
     let info = ctx.adapter_info();
