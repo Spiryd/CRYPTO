@@ -385,7 +385,7 @@ fn search_collision(@builtin(global_invocation_id) global_id: vec3<u32>) {
         words[15] = reverse_ff(b, c, d, a, T[16], 22u, orig);
         
         // ====================================================================
-        // ROUND 2: Verify conditions (cannot modify messages)
+        // ROUND 2: Verify conditions
         // ====================================================================
         
         // a5

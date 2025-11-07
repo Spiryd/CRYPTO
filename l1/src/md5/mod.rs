@@ -372,7 +372,7 @@ pub(crate) fn compute_md5_digest_with_iv(mut v: Vec<u8>, iv: InitialValues) -> [
         word_d = word_d.wrapping_add(word_dd);
     }
 
-    // Return as 128-bit byte array (little-endian byte order)
+    // Return as 128-bit byte array 
     let mut result = [0u8; 16];
     result[0..4].copy_from_slice(&word_a.swap_bytes().to_be_bytes());
     result[4..8].copy_from_slice(&word_b.swap_bytes().to_be_bytes());
