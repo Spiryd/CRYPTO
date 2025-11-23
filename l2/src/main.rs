@@ -3,12 +3,16 @@ mod field;
 mod polynomial;
 mod extension_field;
 mod binary_field;
+mod elliptic_curve;
+mod binary_elliptic_curve;
 
 use bigint::BigUint;
 use field::{Field, FieldElement};
 use polynomial::Polynomial;
 use extension_field::ExtensionFieldElement;
 use binary_field::BinaryFieldElement;
+use elliptic_curve::EllipticCurve;
+use binary_elliptic_curve::BinaryEllipticCurve;
 
 fn main() {
     println!("=== Finite Field Cryptography Library ===\n");
@@ -17,6 +21,8 @@ fn main() {
     demo_extension_field();
     demo_binary_field();
     demo_large_fields();
+    demo_elliptic_curves();
+    demo_binary_elliptic_curves();
 }
 
 /// Demonstrate operations in base field Fp (k=1 case)
@@ -207,6 +213,376 @@ fn demo_large_fields() {
     println!("Result has {} bits", power.value().bit_len());
     
     println!();
+}
+
+/// Demonstrate elliptic curve operations over finite fields
+fn demo_elliptic_curves() {
+    println!("\n--- Elliptic Curve Groups ---");
+    
+    // Example 1: Small curve over F_17
+    println!("\n=== Example 1: Curve y^2 = x^3 + 2x + 2 over F_17 ===");
+    let p = BigUint::from_u64(17);
+    println!("Working over F_{}", p);
+    
+    let a = FieldElement::new(BigUint::from_u64(2), p.clone());
+    let b = FieldElement::new(BigUint::from_u64(2), p.clone());
+    let curve = EllipticCurve::new(a, b);
+    
+    println!("Curve equation: y^2 = x^3 + 2x + 2");
+    
+    // Create some points on the curve
+    let p1 = curve.point(
+        FieldElement::new(BigUint::from_u64(5), p.clone()),
+        FieldElement::new(BigUint::from_u64(1), p.clone())
+    );
+    let p2 = curve.point(
+        FieldElement::new(BigUint::from_u64(6), p.clone()),
+        FieldElement::new(BigUint::from_u64(3), p.clone())
+    );
+    
+    println!("\nP1 = (5, 1)");
+    println!("P2 = (6, 3)");
+    println!("P1 on curve: {}", curve.is_on_curve(&p1));
+    println!("P2 on curve: {}", curve.is_on_curve(&p2));
+    
+    // Point addition
+    println!("\n--- Point Addition (Chord Law) ---");
+    let p3 = curve.add(&p1, &p2);
+    if let Some(x) = p3.x() {
+        println!("P1 + P2 = ({}, {})", x, p3.y().unwrap());
+    } else {
+        println!("P1 + P2 = O (point at infinity)");
+    }
+    println!("Result on curve: {}", curve.is_on_curve(&p3));
+    
+    // Point doubling
+    println!("\n--- Point Doubling (Tangent Law) ---");
+    let p1_doubled = curve.double(&p1);
+    if let Some(x) = p1_doubled.x() {
+        println!("2*P1 = ({}, {})", x, p1_doubled.y().unwrap());
+    } else {
+        println!("2*P1 = O (point at infinity)");
+    }
+    println!("Result on curve: {}", curve.is_on_curve(&p1_doubled));
+    
+    // Verify doubling equals addition
+    let p1_added = curve.add(&p1, &p1);
+    println!("2*P1 equals P1 + P1: {}", p1_doubled == p1_added);
+    
+    // Point negation
+    println!("\n--- Point Negation ---");
+    let neg_p1 = curve.negate(&p1);
+    if let Some(x) = neg_p1.x() {
+        println!("-P1 = ({}, {})", x, neg_p1.y().unwrap());
+    }
+    println!("-P1 on curve: {}", curve.is_on_curve(&neg_p1));
+    
+    // Verify P + (-P) = O
+    let sum = curve.add(&p1, &neg_p1);
+    println!("P1 + (-P1) = O: {}", sum.is_infinity());
+    
+    // Identity element
+    println!("\n--- Identity Element ---");
+    let inf = curve.infinity();
+    let p1_plus_inf = curve.add(&p1, &inf);
+    println!("P1 + O = P1: {}", p1_plus_inf == p1);
+    
+    // Scalar multiplication
+    println!("\n--- Scalar Multiplication ---");
+    for k in 0..=5 {
+        let result = curve.scalar_mul(&BigUint::from_u64(k), &p1);
+        if let Some(x) = result.x() {
+            println!("{}*P1 = ({}, {})", k, x, result.y().unwrap());
+        } else {
+            println!("{}*P1 = O", k);
+        }
+    }
+    
+    // Example 2: Larger field (simulating secp256k1-like curve)
+    println!("\n\n=== Example 2: Curve over larger field (simulating cryptographic use) ===");
+    
+    // Use a 64-bit prime for demonstration (real crypto uses 256+ bits)
+    let large_p = BigUint::from_u64(0xFFFFFFFFFFFFFFC5); // Large prime
+    println!("Working over F_{} (64-bit prime)", large_p);
+    
+    // Curve parameters (simplified, not actual secp256k1)
+    let a_large = FieldElement::new(BigUint::from_u64(0), large_p.clone());
+    let b_large = FieldElement::new(BigUint::from_u64(7), large_p.clone());
+    let large_curve = EllipticCurve::new(a_large, b_large);
+    
+    println!("Curve equation: y^2 = x^3 + 7");
+    
+    // Generator point (example coordinates)
+    let g = large_curve.point(
+        FieldElement::new(BigUint::from_u64(0x79BE667EF9DCBBAC), large_p.clone()),
+        FieldElement::new(BigUint::from_u64(0x483ADA7726A3C465), large_p.clone())
+    );
+    
+    println!("\nGenerator point G:");
+    if let Some(x) = g.x() {
+        println!("  x = {}", x);
+        println!("  y = {}", g.y().unwrap());
+    }
+    println!("G on curve: {}", large_curve.is_on_curve(&g));
+    
+    // Demonstrate efficient scalar multiplication
+    println!("\n--- Efficient Scalar Multiplication ---");
+    let secret_key = BigUint::from_u64(12345);
+    println!("Computing {}*G using double-and-add algorithm...", secret_key);
+    let public_key = large_curve.scalar_mul(&secret_key, &g);
+    println!("Result computed!");
+    println!("Public key on curve: {}", large_curve.is_on_curve(&public_key));
+    
+    // Demonstrate group law properties
+    println!("\n--- Group Law Properties ---");
+    
+    let p_small = BigUint::from_u64(17);
+    let a_small = FieldElement::new(BigUint::from_u64(2), p_small.clone());
+    let b_small = FieldElement::new(BigUint::from_u64(2), p_small.clone());
+    let test_curve = EllipticCurve::new(a_small, b_small);
+    
+    let q1 = test_curve.point(
+        FieldElement::new(BigUint::from_u64(5), p_small.clone()),
+        FieldElement::new(BigUint::from_u64(1), p_small.clone())
+    );
+    let q2 = test_curve.point(
+        FieldElement::new(BigUint::from_u64(6), p_small.clone()),
+        FieldElement::new(BigUint::from_u64(3), p_small.clone())
+    );
+    let q3 = test_curve.point(
+        FieldElement::new(BigUint::from_u64(10), p_small.clone()),
+        FieldElement::new(BigUint::from_u64(6), p_small.clone())
+    );
+    
+    // Associativity: (Q1 + Q2) + Q3 = Q1 + (Q2 + Q3)
+    let left = test_curve.add(&test_curve.add(&q1, &q2), &q3);
+    let right = test_curve.add(&q1, &test_curve.add(&q2, &q3));
+    println!("Associativity: (Q1 + Q2) + Q3 = Q1 + (Q2 + Q3): {}", left == right);
+    
+    // Commutativity: Q1 + Q2 = Q2 + Q1
+    let sum1 = test_curve.add(&q1, &q2);
+    let sum2 = test_curve.add(&q2, &q1);
+    println!("Commutativity: Q1 + Q2 = Q2 + Q1: {}", sum1 == sum2);
+    
+    // Identity: Q1 + O = Q1
+    let inf_test = test_curve.infinity();
+    let sum_with_inf = test_curve.add(&q1, &inf_test);
+    println!("Identity: Q1 + O = Q1: {}", sum_with_inf == q1);
+    
+    // Inverse: Q1 + (-Q1) = O
+    let neg_q1 = test_curve.negate(&q1);
+    let sum_with_inv = test_curve.add(&q1, &neg_q1);
+    println!("Inverse: Q1 + (-Q1) = O: {}", sum_with_inv.is_infinity());
+    
+    println!("\n--- Scalar Multiplication Properties ---");
+    
+    // Distributivity: k(P + Q) = kP + kQ
+    let k = BigUint::from_u64(3);
+    let p_plus_q = test_curve.add(&q1, &q2);
+    let k_times_sum = test_curve.scalar_mul(&k, &p_plus_q);
+    let kp = test_curve.scalar_mul(&k, &q1);
+    let kq = test_curve.scalar_mul(&k, &q2);
+    let sum_of_muls = test_curve.add(&kp, &kq);
+    println!("Distributivity: k(P + Q) = kP + kQ: {}", k_times_sum == sum_of_muls);
+    
+    // Associativity: (j + k)P = jP + kP
+    let j = BigUint::from_u64(2);
+    let j_plus_k = &j + &k;
+    let combined_mul = test_curve.scalar_mul(&j_plus_k, &q1);
+    let jp = test_curve.scalar_mul(&j, &q1);
+    let kp_again = test_curve.scalar_mul(&k, &q1);
+    let sum_of_scalars = test_curve.add(&jp, &kp_again);
+    println!("Scalar associativity: (j + k)P = jP + kP: {}", combined_mul == sum_of_scalars);
+    
+    println!("\nElliptic curve demonstrations completed!");
+}
+
+/// Demonstrate binary elliptic curve operations over F2^m
+fn demo_binary_elliptic_curves() {
+    println!("\n\n--- Binary Elliptic Curves (F2^m) ---");
+    println!("Using characteristic 2 form: y^2 + xy = x^3 + ax^2 + b\n");
+    
+    // Example 1: Small binary field F2^4
+    println!("=== Example 1: Binary curve over F2^4 ===");
+    let irreducible = vec![0b10011]; // x^4 + x + 1
+    let degree = 4;
+    
+    println!("Working over F2^4");
+    println!("Irreducible polynomial: x^4 + x + 1");
+    
+    // Curve: y^2 + xy = x^3 + x^2 + 1
+    let a = BinaryFieldElement::from_u64(1, irreducible.clone(), degree);
+    let b = BinaryFieldElement::from_u64(1, irreducible.clone(), degree);
+    let curve = BinaryEllipticCurve::new(a, b);
+    
+    println!("Curve equation: y^2 + xy = x^3 + x^2 + 1\n");
+    
+    // Find a point on the curve by testing
+    println!("Finding points on the curve...");
+    let mut test_point = None;
+    for x_val in 1..16 {
+        for y_val in 0..16 {
+            let x = BinaryFieldElement::from_u64(x_val, irreducible.clone(), degree);
+            let y = BinaryFieldElement::from_u64(y_val, irreducible.clone(), degree);
+            let p = curve.point(x, y);
+            if curve.is_on_curve(&p) {
+                println!("Found point P = ({:#06b}, {:#06b})", x_val, y_val);
+                test_point = Some(p);
+                break;
+            }
+        }
+        if test_point.is_some() {
+            break;
+        }
+    }
+    
+    if let Some(p) = test_point {
+        println!("\n--- Point Doubling ---");
+        let p2 = curve.double(&p);
+        println!("2P computed");
+        println!("2P on curve: {}", curve.is_on_curve(&p2));
+        
+        // Verify doubling equals addition
+        let p_plus_p = curve.add(&p, &p);
+        println!("2P equals P + P: {}", p2 == p_plus_p);
+        
+        println!("\n--- Point Negation ---");
+        let neg_p = curve.negate(&p);
+        println!("-P on curve: {}", curve.is_on_curve(&neg_p));
+        
+        // Verify P + (-P) = O
+        let sum = curve.add(&p, &neg_p);
+        println!("P + (-P) = O: {}", sum.is_infinity());
+        
+        println!("\n--- Identity Element ---");
+        let inf = curve.infinity();
+        let p_plus_inf = curve.add(&p, &inf);
+        println!("P + O = P: {}", p_plus_inf == p);
+        
+        println!("\n--- Scalar Multiplication ---");
+        for k in 0..=5 {
+            let result = curve.scalar_mul(k, &p);
+            println!("{}*P: {}", k, if result.is_infinity() { "O (infinity)" } else { "on curve" });
+            if !result.is_infinity() {
+                assert!(curve.is_on_curve(&result));
+            }
+        }
+    }
+    
+    // Example 2: AES field F2^8
+    println!("\n\n=== Example 2: Binary curve over F2^8 (AES field) ===");
+    let aes_irreducible = vec![0b00011011, 0b00000001]; // x^8 + x^4 + x^3 + x + 1
+    let aes_degree = 8;
+    
+    println!("Working over F2^8");
+    println!("Irreducible polynomial: x^8 + x^4 + x^3 + x + 1 (AES polynomial)");
+    
+    // Curve: y^2 + xy = x^3 + b (where a = 0)
+    let a_aes = BinaryFieldElement::from_u64(0, aes_irreducible.clone(), aes_degree);
+    let b_aes = BinaryFieldElement::from_u64(1, aes_irreducible.clone(), aes_degree);
+    let curve_aes = BinaryEllipticCurve::new(a_aes, b_aes);
+    
+    println!("Curve equation: y^2 + xy = x^3 + 1\n");
+    
+    // Test with specific points
+    println!("Testing point operations...");
+    let x_test = BinaryFieldElement::from_u64(0x03, aes_irreducible.clone(), aes_degree);
+    let y_test = BinaryFieldElement::from_u64(0x0A, aes_irreducible.clone(), aes_degree);
+    let p_aes = curve_aes.point(x_test, y_test);
+    
+    if curve_aes.is_on_curve(&p_aes) {
+        println!("Point P = (0x03, 0x0A) is on the curve!");
+        
+        let doubled = curve_aes.double(&p_aes);
+        println!("2P on curve: {}", curve_aes.is_on_curve(&doubled));
+        
+        let tripled = curve_aes.scalar_mul(3, &p_aes);
+        println!("3P on curve: {}", curve_aes.is_on_curve(&tripled));
+        
+        let large_scalar = curve_aes.scalar_mul(100, &p_aes);
+        println!("100P on curve: {}", curve_aes.is_on_curve(&large_scalar));
+    } else {
+        println!("Testing with different point...");
+        // Try another point
+        for x_val in 1..256 {
+            for y_val in 0..256 {
+                let x = BinaryFieldElement::from_u64(x_val, aes_irreducible.clone(), aes_degree);
+                let y = BinaryFieldElement::from_u64(y_val, aes_irreducible.clone(), aes_degree);
+                let p_try = curve_aes.point(x, y);
+                if curve_aes.is_on_curve(&p_try) {
+                    println!("Found point: (0x{:02X}, 0x{:02X})", x_val, y_val);
+                    
+                    let test_double = curve_aes.double(&p_try);
+                    println!("2P on curve: {}", curve_aes.is_on_curve(&test_double));
+                    
+                    let test_scalar = curve_aes.scalar_mul(5, &p_try);
+                    println!("5P on curve: {}", curve_aes.is_on_curve(&test_scalar));
+                    break;
+                }
+            }
+            if x_val > 50 { // Limit search
+                break;
+            }
+        }
+    }
+    
+    // Demonstrate group properties
+    println!("\n--- Group Law Properties ---");
+    println!("Testing associativity, commutativity, identity, and inverse properties...");
+    
+    // Use the F2^4 field for testing (smaller, easier to find points)
+    let test_irreducible = vec![0b10011];
+    let test_degree = 4;
+    let a_test = BinaryFieldElement::from_u64(1, test_irreducible.clone(), test_degree);
+    let b_test = BinaryFieldElement::from_u64(1, test_irreducible.clone(), test_degree);
+    let test_curve = BinaryEllipticCurve::new(a_test, b_test);
+    
+    // Find three points for testing
+    let mut points = Vec::new();
+    for x_val in 1..16 {
+        for y_val in 0..16 {
+            let x = BinaryFieldElement::from_u64(x_val, test_irreducible.clone(), test_degree);
+            let y = BinaryFieldElement::from_u64(y_val, test_irreducible.clone(), test_degree);
+            let p = test_curve.point(x, y);
+            if test_curve.is_on_curve(&p) {
+                points.push(p);
+                if points.len() == 3 {
+                    break;
+                }
+            }
+        }
+        if points.len() == 3 {
+            break;
+        }
+    }
+    
+    if points.len() >= 3 {
+        let q1 = &points[0];
+        let q2 = &points[1];
+        let q3 = &points[2];
+        
+        // Associativity: (Q1 + Q2) + Q3 = Q1 + (Q2 + Q3)
+        let left = test_curve.add(&test_curve.add(q1, q2), q3);
+        let right = test_curve.add(q1, &test_curve.add(q2, q3));
+        println!("Associativity: (Q1 + Q2) + Q3 = Q1 + (Q2 + Q3): {}", left == right);
+        
+        // Commutativity: Q1 + Q2 = Q2 + Q1
+        let sum1 = test_curve.add(q1, q2);
+        let sum2 = test_curve.add(q2, q1);
+        println!("Commutativity: Q1 + Q2 = Q2 + Q1: {}", sum1 == sum2);
+        
+        // Identity: Q1 + O = Q1
+        let inf_test = test_curve.infinity();
+        let sum_with_inf = test_curve.add(q1, &inf_test);
+        println!("Identity: Q1 + O = Q1: {}", sum_with_inf == *q1);
+        
+        // Inverse: Q1 + (-Q1) = O
+        let neg_q1 = test_curve.negate(q1);
+        let sum_with_inv = test_curve.add(q1, &neg_q1);
+        println!("Inverse: Q1 + (-Q1) = O: {}", sum_with_inv.is_infinity());
+    }
+    
+    println!("\nBinary elliptic curve demonstrations completed!");
 }
 
 // Helper module for hex encoding/decoding

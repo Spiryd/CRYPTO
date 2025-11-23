@@ -64,6 +64,16 @@ impl BinaryFieldElement {
         self.bits.iter().all(|&b| b == 0)
     }
     
+    /// Get the irreducible polynomial
+    pub fn irreducible(&self) -> &Vec<u8> {
+        &self.irreducible
+    }
+    
+    /// Get the extension degree
+    pub fn degree(&self) -> usize {
+        self.degree
+    }
+    
     /// Get bit at position i
     fn get_bit(&self, i: usize) -> bool {
         let byte_idx = i / 8;

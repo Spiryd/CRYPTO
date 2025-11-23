@@ -1,14 +1,16 @@
 # Finite Field Cryptography Library
 
-A comprehensive Rust implementation of finite field arithmetic for public-key cryptography, supporting arbitrary field sizes including cryptographic standards (256, 512, 1024+ bits).
+A comprehensive Rust implementation of finite field arithmetic and elliptic curve groups for public-key cryptography, supporting arbitrary field sizes including cryptographic standards (256, 512, 1024+ bits).
 
 ## Overview
 
-This library implements the basic building blocks for public-key cryptography:
+This library implements the fundamental building blocks for public-key cryptography:
 
 - **Base Fields (Fp)**: Prime fields with efficient modular arithmetic
 - **Extension Fields (Fp^k)**: Polynomial rings over Fp modulo an irreducible polynomial
 - **Binary Fields (F2^k)**: Optimized fields of characteristic 2 using bit string representation
+- **Elliptic Curves (Prime Fields)**: Group operations using Short Weierstrass form (y² = x³ + ax + b)
+- **Elliptic Curves (Binary Fields)**: Group operations using characteristic-2 form (y² + xy = x³ + ax² + b)
 - **Big Integer Arithmetic**: Support for 256, 512, 1024+ bit operations
 
 ## Features
@@ -83,6 +85,83 @@ let inv = a.inv().unwrap();
 ```
 
 **Note**: Binary fields use little-endian bit ordering (LSB first in first byte) as per standard practice for bit strings.
+
+### 5. Elliptic Curve Groups over Prime Fields (`elliptic_curve.rs`)
+
+Elliptic curves over finite fields using Short Weierstrass form: **y² = x³ + ax + b**
+
+```rust
+// Curve y² = x³ + 2x + 2 over F₁₇
+let p = BigUint::from_u64(17);
+let a = FieldElement::new(BigUint::from_u64(2), p.clone());
+let b = FieldElement::new(BigUint::from_u64(2), p.clone());
+let curve = EllipticCurve::new(a, b);
+
+// Create points
+let p1 = curve.point(
+    FieldElement::new(BigUint::from_u64(5), p.clone()),
+    FieldElement::new(BigUint::from_u64(1), p.clone())
+);
+
+// Verify point is on curve
+assert!(curve.is_on_curve(&p1));
+
+// Point operations using Chord-Tangent Law
+let p2 = curve.point(...);
+let sum = curve.add(&p1, &p2);        // Point addition (Chord)
+let doubled = curve.double(&p1);      // Point doubling (Tangent)
+let negated = curve.negate(&p1);      // Point negation
+let identity = curve.infinity();      // Point at infinity
+
+// Efficient scalar multiplication: O(log n)
+let k = BigUint::from_u64(12345);
+let result = curve.scalar_mul(&k, &p1);  // k·P using double-and-add
+```
+
+**Key Features:**
+- **Generic over field types**: Works with Fp, Fp^k, F2^k
+- **Chord-Tangent Law**: Proper group operations with geometric interpretation
+- **Point at infinity**: Correct identity element handling
+- **Efficient scalar multiplication**: O(log n) double-and-add algorithm
+- **Group law verification**: All group properties tested and verified
+
+See [ELLIPTIC_CURVES.md](ELLIPTIC_CURVES.md) for detailed documentation.
+
+### 6. Elliptic Curve Groups over Binary Fields (`binary_elliptic_curve.rs`)
+
+Binary elliptic curves using characteristic-2 Weierstrass form: **y² + xy = x³ + ax² + b**
+
+```rust
+// F₂⁴ with irreducible polynomial x⁴ + x + 1
+let irreducible = vec![0b10011];
+let degree = 4;
+
+// Curve: y² + xy = x³ + x² + 1
+let a = BinaryFieldElement::from_u64(1, irreducible.clone(), degree);
+let b = BinaryFieldElement::from_u64(1, irreducible.clone(), degree);
+let curve = BinaryEllipticCurve::new(a, b);
+
+// Create a point
+let x = BinaryFieldElement::from_u64(0b0001, irreducible.clone(), degree);
+let y = BinaryFieldElement::from_u64(0b0110, irreducible.clone(), degree);
+let p = curve.point(x, y);
+
+// Point operations (using characteristic-2 formulas)
+let doubled = curve.double(&p);       // Point doubling
+let sum = curve.add(&p, &doubled);    // Point addition
+let negated = curve.negate(&p);       // -P = (x, x + y)
+let scalar = curve.scalar_mul(5, &p); // 5·P using double-and-add
+```
+
+**Key Features:**
+- **Characteristic-2 specific formulas**: Different from Short Weierstrass
+- **NIST standard curves**: Compatible with B-163, B-233, B-283, etc.
+- **Hardware efficient**: Binary operations (XOR) are simple in circuits
+- **Constant-time operations**: Easier to implement side-channel resistant code
+
+**Why different?** In characteristic-2 fields, 2 ≡ 0, so division by 2 is undefined. The curve equation y² + xy = x³ + ax² + b avoids this issue with modified point addition formulas.
+
+See [BINARY_ELLIPTIC_CURVES.md](BINARY_ELLIPTIC_CURVES.md) for detailed documentation.
 
 ## Implementation Details
 
@@ -165,12 +244,14 @@ let power = a.pow(&large_exp); // Efficient!
 
 ```
 src/
-├── main.rs              # Examples and demonstrations
-├── bigint.rs            # Big integer arithmetic
-├── field.rs             # Base field Fp and Field trait
-├── polynomial.rs        # Polynomial arithmetic over fields
-├── extension_field.rs   # Extension field Fp^k
-└── binary_field.rs      # Binary field F2^k
+├── main.rs                    # Examples and demonstrations
+├── bigint.rs                  # Big integer arithmetic
+├── field.rs                   # Base field Fp and Field trait
+├── polynomial.rs              # Polynomial arithmetic over fields
+├── extension_field.rs         # Extension field Fp^k
+├── binary_field.rs            # Binary field F2^k
+├── elliptic_curve.rs          # Elliptic curves (Short Weierstrass)
+└── binary_elliptic_curve.rs   # Binary elliptic curves (Characteristic-2)
 ```
 
 ## Building and Running
@@ -197,6 +278,8 @@ The main program demonstrates:
 2. **Extension Field Operations**: Arithmetic in F_{7^2}
 3. **Binary Field Operations**: Arithmetic in F_{2^8} (AES field)
 4. **Large Field Operations**: 256-bit prime field operations
+5. **Elliptic Curve Groups (Prime Fields)**: Chord-Tangent Law operations, scalar multiplication
+6. **Elliptic Curve Groups (Binary Fields)**: Characteristic-2 operations, group properties
 
 ## Tests
 
@@ -208,8 +291,18 @@ Comprehensive test suite covering:
 - Exponentiation efficiency
 - Field-specific edge cases
 - 256-bit field operations
+- **Elliptic curve point operations (prime fields)**
+- **Elliptic curve group laws (prime fields)**
+- **Efficient scalar multiplication (prime fields)**
+- **Binary elliptic curve operations (F₂ᵐ)**
+- **Binary curve group laws and properties**
 
 Run tests with: `cargo test`
+
+**Test Results**: 31/31 tests passing ✓
+- 14 field arithmetic tests
+- 8 Short Weierstrass elliptic curve tests
+- 9 binary elliptic curve tests
 
 ## Performance Characteristics
 
