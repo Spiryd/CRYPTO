@@ -36,18 +36,9 @@
 15. [Usage Examples & Patterns](#15-usage-examples--patterns)
 16. [Cryptographic Applications](#16-cryptographic-applications)
 
-### Part V: Web Integration & Deployment
-17. [Web API Development](#17-web-api-development)
-18. [REST API Implementation](#18-rest-api-implementation)
-19. [WebSocket & Real-Time APIs](#19-websocket--real-time-apis)
-20. [GraphQL Integration](#20-graphql-integration)
-21. [Language Bindings (Python, Node.js, WASM)](#21-language-bindings)
-22. [Security Best Practices](#22-security-best-practices)
-23. [Deployment Strategies](#23-deployment-strategies)
-
-### Part VI: Performance & Testing
-24. [Performance Optimization](#24-performance-optimization)
-25. [Testing & Verification](#25-testing--verification)
+### Part V: Performance & Testing
+17. [Performance Optimization](#17-performance-optimization)
+18. [Testing & Verification](#18-testing--verification)
 
 ### Part VII: Reference Material
 26. [Standards Compliance](#26-standards-compliance)
@@ -123,7 +114,7 @@ This library provides a complete implementation of finite field arithmetic and e
 - Base 10 (decimal) representation
 - Base 16 (hexadecimal) representation
 - Base 64 encoding
-- JSON serialization for web APIs
+- JSON serialization
 - Cross-platform compatibility
 
 ✅ **Cryptographic Standards**
@@ -149,10 +140,7 @@ l2/
 ├── Cargo.toml                    # Dependencies and configuration
 ├── README.md                     # Project overview
 ├── DOCUMENTATION.md              # This file
-├── SERIALIZATION.md              # Serialization guide
-├── WEB_API_GUIDE.md              # Web API integration guide
-├── ELLIPTIC_CURVES.md            # EC mathematical background
-└── BINARY_ELLIPTIC_CURVES.md     # Binary EC background
+└── LIBRARY_USAGE.md              # Library usage guide
 ```
 
 ---
@@ -2055,12 +2043,13 @@ payload = {
     "y": str(client_public.y)
 }
 
-# Send to server
-response = requests.post('http://localhost:8080/ecdh/exchange',
-                        json=payload)
+# Save to file or transmit
+with open('public_key.json', 'w') as f:
+    json.dump(payload, f)
 
-# Deserialize server's public key
-server_public_data = response.json()['server_public_key']
+# Later, load and use
+with open('server_public_key.json', 'r') as f:
+    server_public_data = json.load(f)
 server_public_x = int(server_public_data['x'])
 server_public_y = int(server_public_data['y'])
 
@@ -2082,66 +2071,89 @@ Library includes comprehensive serialization tests:
 
 ---
 
-## 17. Web API Development
+## 17. Performance Optimization
 
-### Using as a Library
+### Algorithmic Improvements
 
-1. **Add dependency:**
-```toml
-[dependencies]
-l2 = { path = "../l2" }
-```
+**Potential enhancements:**
+- Karatsuba multiplication for large numbers (O(n^1.585) vs O(n^2))
+- Montgomery multiplication for repeated modular operations
+- Precomputed lookup tables for binary field multiplication
+- Parallel processing for independent operations
+- SIMD optimizations for bit operations
 
-2. **Import modules:**
-```rust
-use l2::bigint::BigUint;
-use l2::field::FieldElement;
-use l2::elliptic_curve::EllipticCurve;
-use l2::serialization::*;
-```
+### Memory Optimization
 
-3. **Use in your code:**
-```rust
-fn my_crypto_function() {
-    let p = BigUint::from_u64(17);
-    let elem = FieldElement::from_u64(5, p);
-    // ... your logic ...
-}
-```
+- Minimize allocations in hot loops
+- Reuse BigUint instances where possible
+- Use references to avoid unnecessary clones
+- Normalize representations to reduce storage
 
-### Web API Integration
+### Benchmarking
 
-See [WEB_API_GUIDE.md](WEB_API_GUIDE.md) for complete guide to:
-- REST API design
-- WebSocket integration
-- GraphQL schema
-- FFI bindings (C, Python, JavaScript)
-- Security considerations
+Current performance (approximate):
+- **256-bit modular multiplication**: ~1-2 µs
+- **Point addition (prime curve)**: ~5-10 µs
+- **Scalar multiplication (prime curve)**: ~2-5 ms
+- **Binary field multiplication**: ~0.5-1 µs
 
-### FFI Bindings
+---
 
-**C Interface:**
-```c
-// Example C header
-typedef struct BigUint BigUint;
-BigUint* biguint_from_u64(uint64_t value);
-void biguint_free(BigUint* num);
-```
+## 18. Testing & Verification
 
-**Python (via ctypes or PyO3):**
-```python
-from l2 import FieldElement
+### Test Coverage
 
-elem = FieldElement(5, 17)
-result = elem + FieldElement(12, 17)
-```
+Library includes comprehensive test suite:
+- ✅ 34 unit tests (library)
+- ✅ 5 integration tests (binary)
+- ✅ 1 documentation test
+- ✅ **Total: 40 tests passing**
 
-**JavaScript (via wasm-pack):**
-```javascript
-import { FieldElement } from 'l2-wasm';
+### Test Categories
 
-const elem = FieldElement.new(5, 17);
-const result = elem.add(FieldElement.new(12, 17));
+**BigInt Tests:**
+- Basic arithmetic operations
+- Modular exponentiation
+- Edge cases (zero, one, large values)
+
+**Field Tests:**
+- Field arithmetic
+- Multiplicative inverses
+- Exponentiation efficiency
+
+**Elliptic Curve Tests:**
+- Point on curve validation
+- Point addition and doubling
+- Scalar multiplication
+- Identity element behavior
+- Inverse elements
+- Associativity property
+
+**Binary Curve Tests:**
+- Binary field operations
+- Point operations in characteristic 2
+- Large field support
+
+**Serialization Tests:**
+- Base10/Base16/Base64 round-trips
+- JSON serialization for all types
+- Cross-format consistency
+- Malformed input rejection
+
+### Running Tests
+
+```bash
+# Run all tests
+cargo test
+
+# Run specific test module
+cargo test bigint::tests
+
+# Run with output
+cargo test -- --nocapture
+
+# Run doctests
+cargo test --doc
 ```
 
 ---
@@ -2209,437 +2221,7 @@ let private_key = BigUint::from_bytes_be(&private_key_bytes);
 
 ---
 
-## 22. Security Best Practices
 
-### Input Validation
-
-**Always validate inputs before processing:**
-
-```rust
-fn validate_field_element(value: &BigInt, modulus: &BigInt) -> Result<(), String> {
-    if value >= modulus {
-        return Err("Value must be less than modulus".to_string());
-    }
-    if modulus <= &BigInt::from(1) {
-        return Err("Modulus must be greater than 1".to_string());
-    }
-    Ok(())
-}
-
-fn validate_elliptic_curve_point(
-    x: &BigInt,
-    y: &BigInt,
-    a: &BigInt,
-    b: &BigInt,
-    p: &BigInt
-) -> Result<(), String> {
-    // Check if point is on curve: y² ≡ x³ + ax + b (mod p)
-    let lhs = (y * y) % p;
-    let rhs = (x * x * x + a * x + b) % p;
-    
-    if lhs != rhs {
-        return Err("Point is not on the curve".to_string());
-    }
-    
-    Ok(())
-}
-```
-
-**API Handler Example:**
-```rust
-async fn ec_point_add(req: web::Json<ECPointAddRequest>) -> HttpResponse {
-    // Validate inputs
-    let modulus = match BigInt::from_base10(&req.field_modulus) {
-        Ok(m) if m > BigInt::from(1) => m,
-        _ => return HttpResponse::BadRequest().json(json!({
-            "error": "Invalid modulus"
-        }))
-    };
-    
-    // Validate points are on curve
-    if let Err(e) = validate_point(&req.p1, &req.curve_a, &req.curve_b, &modulus) {
-        return HttpResponse::BadRequest().json(json!({"error": e}));
-    }
-    
-    // Proceed with operation...
-}
-```
-
-### Rate Limiting
-
-**Prevent DoS attacks with rate limiting:**
-
-```rust
-use actix_governor::{Governor, GovernorConfigBuilder};
-
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
-    let governor_conf = GovernorConfigBuilder::default()
-        .per_second(2)  // 2 requests per second
-        .burst_size(5)  // Allow bursts of 5
-        .finish()
-        .unwrap();
-    
-    HttpServer::new(move || {
-        App::new()
-            .wrap(Governor::new(&governor_conf))
-            .route("/api/ec/scalar/multiply", web::post().to(ec_scalar_multiply))
-    })
-    .bind(("127.0.0.1", 8080))?
-    .run()
-    .await
-}
-```
-
-### Constant-Time Operations
-
-**Avoid timing attacks:**
-
-```rust
-// BAD: Early return leaks timing information
-fn compare_secrets(a: &[u8], b: &[u8]) -> bool {
-    if a.len() != b.len() {
-        return false;
-    }
-    for i in 0..a.len() {
-        if a[i] != b[i] {
-            return false;  // ⚠️ Timing leak!
-        }
-    }
-    true
-}
-
-// GOOD: Constant-time comparison
-fn constant_time_compare(a: &[u8], b: &[u8]) -> bool {
-    if a.len() != b.len() {
-        return false;
-    }
-    
-    let mut result = 0u8;
-    for i in 0..a.len() {
-        result |= a[i] ^ b[i];
-    }
-    result == 0
-}
-```
-
-### Secure Random Number Generation
-
-```rust
-use rand::rngs::OsRng;
-use rand::RngCore;
-
-fn generate_private_key(bits: usize) -> BigInt {
-    let mut rng = OsRng;  // Cryptographically secure RNG
-    let bytes = (bits + 7) / 8;
-    
-    let mut buffer = vec![0u8; bytes];
-    rng.fill_bytes(&mut buffer);
-    
-    BigInt::from_bytes_be(&buffer)
-}
-
-// Never use:
-// let mut rng = rand::thread_rng();  // ⚠️ Not cryptographically secure!
-```
-
-### HTTPS Only for Production
-
-```rust
-use rustls::{ServerConfig, NoClientAuth};
-
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
-    let mut config = ServerConfig::new(NoClientAuth::new());
-    let cert_file = &mut BufReader::new(File::open("cert.pem")?);
-    let key_file = &mut BufReader::new(File::open("key.pem")?);
-    let cert_chain = certs(cert_file).unwrap();
-    let mut keys = rsa_private_keys(key_file).unwrap();
-    config.set_single_cert(cert_chain, keys.remove(0)).unwrap();
-    
-    HttpServer::new(|| App::new())
-        .bind_rustls("0.0.0.0:8443", config)?
-        .run()
-        .await
-}
-```
-
-### Sanitize Error Messages
-
-```rust
-// BAD: Leaks internal details
-fn bad_handler(req: web::Json<Request>) -> HttpResponse {
-    match process(req) {
-        Ok(result) => HttpResponse::Ok().json(result),
-        Err(e) => HttpResponse::InternalServerError().json(json!({
-            "error": format!("Database connection failed: {}", e)  // ⚠️ Info leak
-        }))
-    }
-}
-
-// GOOD: Generic error messages
-fn good_handler(req: web::Json<Request>) -> HttpResponse {
-    match process(req) {
-        Ok(result) => HttpResponse::Ok().json(result),
-        Err(e) => {
-            log::error!("Internal error: {}", e);  // Log for debugging
-            HttpResponse::InternalServerError().json(json!({
-                "error": "An internal error occurred"  // ✅ Generic message
-            }))
-        }
-    }
-}
-```
-
-### CORS Configuration
-
-```rust
-use actix_cors::Cors;
-
-let cors = Cors::default()
-    .allowed_origin("https://yourdomain.com")  // Specific origin
-    .allowed_methods(vec!["GET", "POST"])
-    .allowed_headers(vec!["content-type", "authorization"])
-    .max_age(3600);
-
-App::new().wrap(cors)
-
-// Avoid:
-// Cors::permissive()  // ⚠️ Allows all origins!
-```
-
----
-
-## 23. Deployment Strategies
-
-### Docker Deployment
-
-**Dockerfile:**
-```dockerfile
-FROM rust:1.75 as builder
-
-WORKDIR /app
-COPY Cargo.toml Cargo.lock ./
-COPY src ./src
-
-RUN cargo build --release
-
-FROM debian:bookworm-slim
-RUN apt-get update && apt-get install -y libssl3 ca-certificates
-
-COPY --from=builder /app/target/release/l2-api /usr/local/bin/
-
-EXPOSE 8080
-
-CMD ["l2-api"]
-```
-
-**Build and run:**
-```bash
-docker build -t l2-crypto-api .
-docker run -p 8080:8080 l2-crypto-api
-```
-
-### Docker Compose
-
-**docker-compose.yml:**
-```yaml
-version: '3.8'
-
-services:
-  api:
-    build: .
-    ports:
-      - "8080:8080"
-    environment:
-      - RUST_LOG=info
-      - API_PORT=8080
-    restart: unless-stopped
-    networks:
-      - crypto-net
-  
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "443:443"
-      - "80:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./certs:/etc/nginx/certs:ro
-    depends_on:
-      - api
-    networks:
-      - crypto-net
-
-networks:
-  crypto-net:
-    driver: bridge
-```
-
-**nginx.conf:**
-```nginx
-events {
-    worker_connections 1024;
-}
-
-http {
-    upstream api {
-        server api:8080;
-    }
-    
-    server {
-        listen 80;
-        server_name yourdomain.com;
-        return 301 https://$server_name$request_uri;
-    }
-    
-    server {
-        listen 443 ssl http2;
-        server_name yourdomain.com;
-        
-        ssl_certificate /etc/nginx/certs/cert.pem;
-        ssl_certificate_key /etc/nginx/certs/key.pem;
-        ssl_protocols TLSv1.2 TLSv1.3;
-        
-        location / {
-            proxy_pass http://api;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-        }
-        
-        # Rate limiting
-        limit_req_zone $binary_remote_addr zone=api_limit:10m rate=10r/s;
-        limit_req zone=api_limit burst=20;
-    }
-}
-```
-
-### Kubernetes Deployment
-
-**deployment.yaml:**
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: l2-crypto-api
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: l2-crypto-api
-  template:
-    metadata:
-      labels:
-        app: l2-crypto-api
-    spec:
-      containers:
-      - name: api
-        image: l2-crypto-api:latest
-        ports:
-        - containerPort: 8080
-        resources:
-          limits:
-            cpu: "1"
-            memory: "512Mi"
-          requests:
-            cpu: "0.5"
-            memory: "256Mi"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 8080
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /ready
-            port: 8080
-          initialDelaySeconds: 5
-          periodSeconds: 5
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: l2-crypto-api
-spec:
-  selector:
-    app: l2-crypto-api
-  ports:
-  - port: 80
-    targetPort: 8080
-  type: LoadBalancer
-```
-
-**Apply:**
-```bash
-kubectl apply -f deployment.yaml
-kubectl get pods
-kubectl get services
-```
-
-### Monitoring with Prometheus
-
-**Cargo.toml:**
-```toml
-prometheus = "0.13"
-actix-web-prom = "0.7"
-```
-
-**main.rs:**
-```rust
-use actix_web_prom::PrometheusMetricsBuilder;
-
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
-    let prometheus = PrometheusMetricsBuilder::new("api")
-        .endpoint("/metrics")
-        .build()
-        .unwrap();
-    
-    HttpServer::new(move || {
-        App::new()
-            .wrap(prometheus.clone())
-            .route("/api/field/add", web::post().to(field_add))
-    })
-    .bind(("127.0.0.1", 8080))?
-    .run()
-    .await
-}
-```
-
-**prometheus.yml:**
-```yaml
-scrape_configs:
-  - job_name: 'l2-crypto-api'
-    static_configs:
-      - targets: ['localhost:8080']
-    metrics_path: '/metrics'
-    scrape_interval: 15s
-```
-
-### Logging
-
-```rust
-use env_logger;
-use log::{info, warn, error};
-
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
-    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
-    
-    info!("Starting API server on port 8080");
-    
-    HttpServer::new(|| {
-        App::new()
-            .wrap(middleware::Logger::new("%a %r %s %b %{Referer}i %{User-Agent}i %T"))
-    })
-    .bind(("127.0.0.1", 8080))?
-    .run()
-    .await
-}
-```
 
 ---
 
@@ -2669,10 +2251,10 @@ This is an educational project, but improvements welcome:
 ## Support
 
 For questions or issues:
-- Check documentation in `*.md` files
+- Check documentation in `DOCUMENTATION.md`
 - Review test cases in `src/*/tests`
 - Examine examples in `src/main.rs`
-- See [WEB_API_GUIDE.md](WEB_API_GUIDE.md) for web integration
+- See [LIBRARY_USAGE.md](LIBRARY_USAGE.md) for library integration
 
 ---
 

@@ -16,8 +16,6 @@ This library implements the fundamental building blocks for modern public-key cr
 - **Elliptic Curves**: Both prime and binary field implementations
 - **Big Integer Arithmetic**: Support for 256, 512, 1024+ bit operations
 - **Full Serialization**: JSON, Base64, Base16, Base10 support
-- **Web APIs**: REST, WebSocket, GraphQL integrations
-- **Language Bindings**: Python, JavaScript/WASM, Node.js
 
 ## 📖 Complete Documentation
 
@@ -30,9 +28,6 @@ This comprehensive guide contains:
 - **Core Components** - All 6 cryptographic structures explained
 - **Mathematical Theory** - Deep dive into elliptic curve mathematics
 - **Practical Usage** - Complete API reference and examples
-- **Web Integration** - REST APIs, WebSocket, GraphQL
-- **Language Bindings** - Python, Node.js, WASM
-- **Security & Deployment** - Best practices, Docker, Kubernetes
 - **Testing & Performance** - Comprehensive test coverage
 
 **No need to search multiple files - everything is there.**
@@ -371,10 +366,6 @@ Run tests with: `cargo test`
 - Mathematical Theory (Deep dive into EC mathematics)
 - Complete API Reference
 - Serialization (JSON, Base64, Base16, Base10)
-- Web APIs (REST, WebSocket, GraphQL)
-- Language Bindings (Python, Node.js, WASM)
-- Security Best Practices
-- Deployment (Docker, Kubernetes)
 - Testing & Performance
 - Full Bibliography & References
 
