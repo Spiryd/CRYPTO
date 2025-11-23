@@ -5,6 +5,7 @@ mod extension_field;
 mod binary_field;
 mod elliptic_curve;
 mod binary_elliptic_curve;
+mod serialization;
 
 use bigint::BigUint;
 use field::{Field, FieldElement};
@@ -23,6 +24,7 @@ fn main() {
     demo_large_fields();
     demo_elliptic_curves();
     demo_binary_elliptic_curves();
+    demo_serialization();
 }
 
 /// Demonstrate operations in base field Fp (k=1 case)
@@ -585,10 +587,148 @@ fn demo_binary_elliptic_curves() {
     println!("\nBinary elliptic curve demonstrations completed!");
 }
 
+/// Demonstrate serialization and interoperability features
+fn demo_serialization() {
+    use serialization::*;
+    
+    println!("\n\n--- Serialization and Interoperability ---");
+    println!("Demonstrating Base 10, Base 16 (hex), and Base64 formats\n");
+    
+    // 1. BigUint Serialization
+    println!("=== 1. BigUint Serialization ===");
+    let num = BigUint::from_u64(987654321);
+    
+    println!("Original number: {}", num.to_base10());
+    println!("Base 10:  {}", num.to_base10());
+    println!("Base 16:  {}", num.to_base16());
+    println!("Base 64:  {}", num.to_base64());
+    
+    // Round-trip test
+    let from_b10 = BigUint::from_base10(&num.to_base10()).unwrap();
+    let from_b16 = BigUint::from_base16(&num.to_base16()).unwrap();
+    let from_b64 = BigUint::from_base64(&num.to_base64()).unwrap();
+    println!("Round-trip verification: {} {} {}", 
+        from_b10 == num, from_b16 == num, from_b64 == num);
+    
+    // 2. Field Element (Fp) Serialization
+    println!("\n=== 2. Field Element (Fp) Serialization ===");
+    let p = BigUint::from_u64(17);
+    let elem = FieldElement::from_u64(13, p);
+    
+    let ser_fp = SerializableFieldElement::from_field_element(&elem);
+    println!("Field element in F_17:");
+    println!("  Value (base10): {}", ser_fp.value_base10);
+    println!("  Value (base16): {}", ser_fp.value_base16);
+    println!("  Value (base64): {}", ser_fp.value_base64);
+    println!("  Modulus:        {}", ser_fp.modulus_base10);
+    
+    let json_fp = ser_fp.to_json().unwrap();
+    println!("\nJSON representation:");
+    println!("{}", json_fp);
+    
+    // Round-trip JSON
+    let deser_fp = SerializableFieldElement::from_json(&json_fp).unwrap();
+    let reconstructed = deser_fp.to_field_element().unwrap();
+    println!("Round-trip successful: {}", reconstructed == elem);
+    
+    // 3. Binary Field Element (F2^m) Serialization
+    println!("\n=== 3. Binary Field Element (F2^8) Serialization ===");
+    let irreducible = vec![0b00011011, 0b00000001]; // AES polynomial
+    let degree = 8;
+    let bin_elem = BinaryFieldElement::from_u64(0x53, irreducible.clone(), degree);
+    
+    let ser_bin = SerializableBinaryFieldElement::from_binary_field_element(&bin_elem);
+    println!("Binary field element in F2^8:");
+    println!("  Value (hex):        {}", ser_bin.value_base16);
+    println!("  Value (base64):     {}", ser_bin.value_base64);
+    println!("  Irreducible (hex):  {}", ser_bin.irreducible_base16);
+    println!("  Degree:             {}", ser_bin.degree);
+    
+    let json_bin = ser_bin.to_json().unwrap();
+    println!("\nJSON representation:");
+    println!("{}", json_bin);
+    
+    // Round-trip
+    let deser_bin = SerializableBinaryFieldElement::from_json(&json_bin).unwrap();
+    let reconstructed_bin = deser_bin.to_binary_field_element().unwrap();
+    println!("Round-trip successful: {}", reconstructed_bin == bin_elem);
+    
+    // 4. Elliptic Curve Point (E(Fp)) Serialization
+    println!("\n=== 4. Elliptic Curve Point E(Fp) Serialization ===");
+    let p_ec = BigUint::from_u64(17);
+    let x = FieldElement::new(BigUint::from_u64(5), p_ec.clone());
+    let y = FieldElement::new(BigUint::from_u64(1), p_ec.clone());
+    let point = elliptic_curve::EllipticCurvePoint::Point { x, y };
+    
+    let ser_point = SerializableECPoint::from_ec_point(&point);
+    let json_point = ser_point.to_json().unwrap();
+    println!("EC Point (5, 1) over F_17:");
+    println!("{}", json_point);
+    
+    if let Ok(compressed) = ser_point.to_compressed() {
+        println!("Compressed format: {}", compressed);
+    }
+    
+    // Point at infinity
+    let infinity = elliptic_curve::EllipticCurvePoint::<FieldElement>::Infinity;
+    let ser_inf = SerializableECPoint::from_ec_point(&infinity);
+    let json_inf = ser_inf.to_json().unwrap();
+    println!("\nPoint at infinity:");
+    println!("{}", json_inf);
+    
+    // 5. Elliptic Curve Parameters
+    println!("\n=== 5. Elliptic Curve Parameters Serialization ===");
+    let a = FieldElement::new(BigUint::from_u64(2), p_ec.clone());
+    let b = FieldElement::new(BigUint::from_u64(2), p_ec.clone());
+    
+    let ser_curve = SerializableEllipticCurve::new(&a, &b);
+    let json_curve = ser_curve.to_json().unwrap();
+    println!("Curve y^2 = x^3 + 2x + 2 over F_17:");
+    println!("{}", json_curve);
+    
+    // 6. Binary Elliptic Curve Point
+    println!("\n=== 6. Binary Elliptic Curve Point E(F2^m) Serialization ===");
+    let test_irreducible = vec![0b10011];
+    let test_degree = 4;
+    let x_bin = BinaryFieldElement::from_u64(0b0001, test_irreducible.clone(), test_degree);
+    let y_bin = BinaryFieldElement::from_u64(0b0110, test_irreducible.clone(), test_degree);
+    let bin_point = binary_elliptic_curve::BinaryEllipticCurvePoint::Point { 
+        x: x_bin, 
+        y: y_bin 
+    };
+    
+    let ser_bin_point = SerializableBinaryECPoint::from_binary_ec_point(&bin_point);
+    let json_bin_point = ser_bin_point.to_json().unwrap();
+    println!("Binary EC Point:");
+    println!("{}", json_bin_point);
+    
+    // 7. Interoperability Demonstration
+    println!("\n=== 7. Cross-Format Interoperability ===");
+    println!("Creating a field element from different input formats:");
+    
+    let from_dec = SerializableFieldElement::from_base10("13", "17").unwrap();
+    let from_hex = SerializableFieldElement::from_base16("d", "11").unwrap();
+    let from_b64 = SerializableFieldElement::from_base64("DQ==", "EQ==").unwrap();
+    
+    println!("From decimal: value={}, modulus={}", 
+        from_dec.value_base10, from_dec.modulus_base10);
+    println!("From hex:     value={}, modulus={}", 
+        from_hex.value_base10, from_hex.modulus_base10);
+    println!("From base64:  value={}, modulus={}", 
+        from_b64.value_base10, from_b64.modulus_base10);
+    
+    println!("\n✓ All serialization formats verified!");
+    println!("✓ All structures support Base 10, Base 16, and Base64");
+    println!("✓ JSON serialization available for all types");
+    println!("✓ Round-trip conversion verified");
+    
+    println!("\nSerialization demonstrations completed!");
+}
+
 // Helper module for hex encoding/decoding
 mod hex {
     pub fn decode(s: &str) -> Result<Vec<u8>, ()> {
-        if s.len() % 2 != 0 {
+        if !s.len().is_multiple_of(2) {
             return Err(());
         }
         

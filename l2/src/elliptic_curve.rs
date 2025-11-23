@@ -5,7 +5,6 @@
 /// - For distinct points P, Q: the line through P and Q intersects the curve at -R, so P + Q = R
 /// - For P = Q: the tangent line at P intersects the curve at -R, so 2P = R
 /// - Point at infinity O is the identity element
-
 use crate::field::Field;
 use crate::bigint::BigUint;
 

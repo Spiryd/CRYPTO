@@ -7,9 +7,7 @@
 /// References:
 /// [3] Guide to Elliptic Curve Cryptography - Hankerson, Menezes, Vanstone
 /// [4] NIST FIPS 186-4 - Digital Signature Standard
-
 use crate::binary_field::BinaryFieldElement;
-use crate::field::Field;
 
 /// Represents a point on a binary elliptic curve
 #[derive(Debug, Clone, PartialEq)]
@@ -29,7 +27,9 @@ pub enum BinaryEllipticCurvePoint {
 pub struct BinaryEllipticCurve {
     pub a: BinaryFieldElement,
     pub b: BinaryFieldElement,
+    #[allow(dead_code)]
     pub irreducible: Vec<u8>,
+    #[allow(dead_code)]
     pub degree: usize,
 }
 
@@ -210,6 +210,7 @@ impl BinaryEllipticCurvePoint {
     }
 
     /// Get the x-coordinate if this is a point (not infinity)
+    #[allow(dead_code)]
     pub fn x(&self) -> Option<&BinaryFieldElement> {
         match self {
             BinaryEllipticCurvePoint::Infinity => None,
@@ -218,6 +219,7 @@ impl BinaryEllipticCurvePoint {
     }
 
     /// Get the y-coordinate if this is a point (not infinity)
+    #[allow(dead_code)]
     pub fn y(&self) -> Option<&BinaryFieldElement> {
         match self {
             BinaryEllipticCurvePoint::Infinity => None,

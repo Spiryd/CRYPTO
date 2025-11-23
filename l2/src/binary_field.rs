@@ -74,6 +74,11 @@ impl BinaryFieldElement {
         self.degree
     }
     
+    /// Convert to bytes (little-endian)
+    pub fn to_bytes(&self) -> Vec<u8> {
+        self.bits.clone()
+    }
+    
     /// Get bit at position i
     fn get_bit(&self, i: usize) -> bool {
         let byte_idx = i / 8;
@@ -105,12 +110,7 @@ impl BinaryFieldElement {
     
     /// Get the degree of the polynomial (highest bit set)
     fn poly_degree(&self) -> Option<usize> {
-        for i in (0..self.degree).rev() {
-            if self.get_bit(i) {
-                return Some(i);
-            }
-        }
-        None
+        (0..self.degree).rev().find(|&i| self.get_bit(i))
     }
     
     /// Reduce modulo irreducible polynomial
@@ -184,10 +184,10 @@ impl BinaryFieldElement {
         let max_len = self.bits.len().max(other.bits.len());
         let mut result = vec![0u8; max_len];
         
-        for i in 0..max_len {
+        for (i, item) in result.iter_mut().enumerate().take(max_len) {
             let a = if i < self.bits.len() { self.bits[i] } else { 0 };
             let b = if i < other.bits.len() { other.bits[i] } else { 0 };
-            result[i] = a ^ b;
+            *item = a ^ b;
         }
         
         BinaryFieldElement {
@@ -246,9 +246,7 @@ impl BinaryFieldElement {
         let mut result = vec![0u8; new_len];
         
         if bit_shift == 0 {
-            for i in 0..self.bits.len() {
-                result[i + byte_shift] = self.bits[i];
-            }
+            result[byte_shift..(self.bits.len() + byte_shift)].copy_from_slice(&self.bits[..]);
         } else {
             let mut carry = 0u8;
             for i in 0..self.bits.len() {

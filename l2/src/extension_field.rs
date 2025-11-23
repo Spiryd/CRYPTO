@@ -86,6 +86,16 @@ impl ExtensionFieldElement {
     pub fn extension_degree(&self) -> usize {
         self.irreducible.degree() as usize
     }
+    
+    /// Get coefficients as a vector
+    pub fn coefficients(&self) -> Vec<FieldElement> {
+        self.poly.coeffs().to_vec()
+    }
+    
+    /// Get modulus (for serialization)
+    pub fn modulus(&self) -> &BigUint {
+        &self.base_modulus
+    }
 }
 
 impl PartialEq for ExtensionFieldElement {
@@ -209,7 +219,7 @@ fn poly_extended_gcd<F: Field>(
 ) -> (Polynomial<F>, Polynomial<F>, Polynomial<F>) {
     if b.is_zero() {
         let one = a.get_coeff(0).unwrap().clone();
-        return (a.clone(), Polynomial::constant(one.div(&a.get_coeff(a.degree() as usize).unwrap()).unwrap()), Polynomial::zero());
+        return (a.clone(), Polynomial::constant(one.div(a.get_coeff(a.degree() as usize).unwrap()).unwrap()), Polynomial::zero());
     }
     
     let mut old_r = a.clone();
@@ -218,7 +228,7 @@ fn poly_extended_gcd<F: Field>(
     // Create zero and one polynomials in the same field as coefficients
     let zero_coeff = a.get_coeff(0).unwrap().clone().mul(&a.get_coeff(0).unwrap().inv().unwrap());
     let one_coeff = if let Some(c) = a.get_coeff(0) {
-        c.clone().div(&c).unwrap()
+        c.clone().div(c).unwrap()
     } else {
         return (Polynomial::zero(), Polynomial::zero(), Polynomial::zero());
     };

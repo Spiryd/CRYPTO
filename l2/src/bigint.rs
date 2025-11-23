@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 use std::fmt;
 use std::ops::{Add, Sub, Mul, Div, Rem, Shl, Shr, BitAnd, BitOr, BitXor};
+use base64::Engine;
 
 /// Big unsigned integer with configurable size in bits
 /// Stored in little-endian format (least significant word first)
@@ -15,7 +16,7 @@ impl BigUint {
 
     /// Create a new BigUint with specified number of bits capacity
     pub fn new(bits: usize) -> Self {
-        let words = (bits + Self::WORD_BITS - 1) / Self::WORD_BITS;
+        let words = bits.div_ceil(Self::WORD_BITS);
         BigUint {
             words: vec![0; words],
         }
@@ -30,7 +31,7 @@ impl BigUint {
 
     /// Create from a slice of bytes (big-endian)
     pub fn from_bytes_be(bytes: &[u8]) -> Self {
-        let words = (bytes.len() + 7) / 8;
+        let words = bytes.len().div_ceil(8);
         let mut result = BigUint {
             words: vec![0; words],
         };
@@ -47,7 +48,7 @@ impl BigUint {
 
     /// Create from a slice of bytes (little-endian)
     pub fn from_bytes_le(bytes: &[u8]) -> Self {
-        let words = (bytes.len() + 7) / 8;
+        let words = bytes.len().div_ceil(8);
         let mut result = BigUint {
             words: vec![0; words],
         };
@@ -248,7 +249,7 @@ impl BigUint {
             
             // Update r
             let temp_r = newr.clone();
-            newr = if &r >= &(&quotient * &newr) {
+            newr = if r >= (&quotient * &newr) {
                 &r - &(&quotient * &temp_r)
             } else {
                 // This shouldn't happen in proper extended gcd
@@ -259,7 +260,7 @@ impl BigUint {
             // Update t (with modular arithmetic to handle "negative" values)
             let temp_t = newt.clone();
             let qt = quotient.mul_mod(&newt, modulus);
-            newt = if &t >= &qt {
+            newt = if t >= qt {
                 &t - &qt
             } else {
                 // t is "negative", so we compute modulus - (qt - t)
@@ -279,7 +280,7 @@ impl BigUint {
 
 impl PartialOrd for BigUint {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
+        Some(std::cmp::Ord::cmp(self, other))
     }
 }
 
@@ -477,7 +478,102 @@ impl BigUint {
         remainder.normalize();
         (quotient, remainder)
     }
+
+    /// Convert to Base 10 string representation
+    pub fn to_base10(&self) -> String {
+        if self.is_zero() {
+            return "0".to_string();
+        }
+
+        let mut result = Vec::new();
+        let mut temp = self.clone();
+        let ten = BigUint::from_u64(10);
+
+        while !temp.is_zero() {
+            let (quotient, remainder) = temp.div_rem(&ten);
+            result.push((remainder.words[0] as u8 + b'0') as char);
+            temp = quotient;
+        }
+
+        result.iter().rev().collect()
+    }
+
+    /// Create from Base 10 string representation
+    pub fn from_base10(s: &str) -> Result<Self, String> {
+        if s.is_empty() {
+            return Err("Empty string".to_string());
+        }
+
+        let mut result = BigUint::zero();
+        let ten = BigUint::from_u64(10);
+
+        for ch in s.chars() {
+            if !ch.is_ascii_digit() {
+                return Err(format!("Invalid character: {}", ch));
+            }
+            let digit = (ch as u8 - b'0') as u64;
+            result = &(&result * &ten) + &BigUint::from_u64(digit);
+        }
+
+        Ok(result)
+    }
+
+    /// Convert to Base 16 (hexadecimal) string representation
+    pub fn to_base16(&self) -> String {
+        if self.is_zero() {
+            return "0".to_string();
+        }
+
+        let bytes = self.to_bytes_be();
+        bytes.iter().map(|b| format!("{:02x}", b)).collect()
+    }
+
+    /// Create from Base 16 (hexadecimal) string representation
+    pub fn from_base16(s: &str) -> Result<Self, String> {
+        let s = s.trim_start_matches("0x").trim_start_matches("0X");
+        
+        if s.is_empty() {
+            return Ok(BigUint::zero());
+        }
+
+        let mut bytes = Vec::new();
+        let chars: Vec<char> = s.chars().collect();
+        
+        // Pad with leading zero if odd length
+        let padded = if chars.len() % 2 == 1 {
+            let mut padded = vec!['0'];
+            padded.extend(chars);
+            padded
+        } else {
+            chars
+        };
+
+        for chunk in padded.chunks(2) {
+            let hex_str: String = chunk.iter().collect();
+            let byte = u8::from_str_radix(&hex_str, 16)
+                .map_err(|_| format!("Invalid hex string: {}", s))?;
+            bytes.push(byte);
+        }
+
+        Ok(BigUint::from_bytes_be(&bytes))
+    }
+
+    /// Convert to Base64 string representation
+    pub fn to_base64(&self) -> String {
+        let bytes = self.to_bytes_be();
+        base64::engine::general_purpose::STANDARD.encode(&bytes)
+    }
+
+    /// Create from Base64 string representation
+    pub fn from_base64(s: &str) -> Result<Self, String> {
+        use base64::Engine;
+        let bytes = base64::engine::general_purpose::STANDARD
+            .decode(s)
+            .map_err(|e| format!("Invalid base64: {}", e))?;
+        Ok(BigUint::from_bytes_be(&bytes))
+    }
 }
+
 
 // Shift operations
 impl Shl<usize> for &BigUint {

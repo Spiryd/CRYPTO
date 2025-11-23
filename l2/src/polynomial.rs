@@ -238,12 +238,10 @@ impl fmt::Display for Polynomial<FieldElement> {
                 } else {
                     format!("{}*X", coeff.value())
                 }
+            } else if coeff.value().is_one() {
+                format!("X^{}", i)
             } else {
-                if coeff.value().is_one() {
-                    format!("X^{}", i)
-                } else {
-                    format!("{}*X^{}", coeff.value(), i)
-                }
+                format!("{}*X^{}", coeff.value(), i)
             };
             
             terms.push(term);
