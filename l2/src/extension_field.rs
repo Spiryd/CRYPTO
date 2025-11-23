@@ -4,7 +4,7 @@ use crate::polynomial::Polynomial;
 use std::fmt;
 use std::ops::{Add, Sub, Mul, Div, Neg};
 
-/// Extension field F_{p^k} represented as F_p[X] / (f(X))
+/// Extension field F_{p^k} represented as F_p\[X\] / (f(X))
 /// where f(X) is an irreducible polynomial of degree k over F_p
 /// Elements are polynomials of degree < k
 #[derive(Clone, Debug)]

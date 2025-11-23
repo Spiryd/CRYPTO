@@ -1,19 +1,15 @@
-mod bigint;
-mod field;
-mod polynomial;
-mod extension_field;
-mod binary_field;
-mod elliptic_curve;
-mod binary_elliptic_curve;
-mod serialization;
+// Binary/CLI entry point for L2 cryptography library demos
+// This demonstrates the library functionality - the actual library is in lib.rs
 
-use bigint::BigUint;
-use field::{Field, FieldElement};
-use polynomial::Polynomial;
-use extension_field::ExtensionFieldElement;
-use binary_field::BinaryFieldElement;
-use elliptic_curve::EllipticCurve;
-use binary_elliptic_curve::BinaryEllipticCurve;
+use l2::{
+    BigUint,
+    Field, FieldElement,
+    Polynomial,
+    ExtensionFieldElement,
+    BinaryFieldElement,
+    EllipticCurve,
+    BinaryEllipticCurve,
+};
 
 fn main() {
     println!("=== Finite Field Cryptography Library ===\n");
@@ -589,7 +585,7 @@ fn demo_binary_elliptic_curves() {
 
 /// Demonstrate serialization and interoperability features
 fn demo_serialization() {
-    use serialization::*;
+    use l2::serialization::*;
     
     println!("\n\n--- Serialization and Interoperability ---");
     println!("Demonstrating Base 10, Base 16 (hex), and Base64 formats\n");
@@ -658,7 +654,7 @@ fn demo_serialization() {
     let p_ec = BigUint::from_u64(17);
     let x = FieldElement::new(BigUint::from_u64(5), p_ec.clone());
     let y = FieldElement::new(BigUint::from_u64(1), p_ec.clone());
-    let point = elliptic_curve::EllipticCurvePoint::Point { x, y };
+    let point = l2::elliptic_curve::EllipticCurvePoint::Point { x, y };
     
     let ser_point = SerializableECPoint::from_ec_point(&point);
     let json_point = ser_point.to_json().unwrap();
@@ -670,7 +666,7 @@ fn demo_serialization() {
     }
     
     // Point at infinity
-    let infinity = elliptic_curve::EllipticCurvePoint::<FieldElement>::Infinity;
+    let infinity = l2::elliptic_curve::EllipticCurvePoint::<FieldElement>::Infinity;
     let ser_inf = SerializableECPoint::from_ec_point(&infinity);
     let json_inf = ser_inf.to_json().unwrap();
     println!("\nPoint at infinity:");
@@ -692,7 +688,7 @@ fn demo_serialization() {
     let test_degree = 4;
     let x_bin = BinaryFieldElement::from_u64(0b0001, test_irreducible.clone(), test_degree);
     let y_bin = BinaryFieldElement::from_u64(0b0110, test_irreducible.clone(), test_degree);
-    let bin_point = binary_elliptic_curve::BinaryEllipticCurvePoint::Point { 
+    let bin_point = l2::binary_elliptic_curve::BinaryEllipticCurvePoint::Point { 
         x: x_bin, 
         y: y_bin 
     };

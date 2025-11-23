@@ -309,7 +309,7 @@ impl BinaryFieldElement {
         BigUint::from_bytes_le(&self.irreducible)
     }
     
-    /// Polynomial division in F_2[X]
+    /// Polynomial division in F_2\[X\]
     fn poly_div_mod_f2(dividend: &BigUint, divisor: &BigUint) -> (BigUint, BigUint) {
         if divisor.is_zero() {
             panic!("Division by zero");
@@ -331,7 +331,7 @@ impl BinaryFieldElement {
         (quotient, remainder)
     }
     
-    /// Polynomial multiplication in F_2[X] (without reduction)
+    /// Polynomial multiplication in F_2\[X\] (without reduction)
     fn poly_mul_f2(a: &BigUint, b: &BigUint) -> BigUint {
         let mut result = BigUint::zero();
         

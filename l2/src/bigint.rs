@@ -170,22 +170,6 @@ impl BigUint {
         self.words[word_idx] |= 1 << bit_idx;
     }
 
-    /// Compare with another BigUint
-    pub fn cmp(&self, other: &BigUint) -> Ordering {
-        if self.words.len() != other.words.len() {
-            return self.words.len().cmp(&other.words.len());
-        }
-
-        for i in (0..self.words.len()).rev() {
-            match self.words[i].cmp(&other.words[i]) {
-                Ordering::Equal => continue,
-                ord => return ord,
-            }
-        }
-
-        Ordering::Equal
-    }
-
     /// Modular addition: (self + other) % modulus
     pub fn add_mod(&self, other: &BigUint, modulus: &BigUint) -> BigUint {
         let sum = self + other;
@@ -286,7 +270,18 @@ impl PartialOrd for BigUint {
 
 impl Ord for BigUint {
     fn cmp(&self, other: &Self) -> Ordering {
-        BigUint::cmp(self, other)
+        if self.words.len() != other.words.len() {
+            return self.words.len().cmp(&other.words.len());
+        }
+
+        for i in (0..self.words.len()).rev() {
+            match self.words[i].cmp(&other.words[i]) {
+                Ordering::Equal => continue,
+                ord => return ord,
+            }
+        }
+
+        Ordering::Equal
     }
 }
 

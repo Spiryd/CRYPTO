@@ -4,6 +4,16 @@ version = "0.1.0"
 edition = "2024"
 authors = ["Maksymilian Neumann <maksymilian.neumann@spiryd.dev"]
 
+# Library configuration
+[lib]
+name = "l2"
+path = "src/lib.rs"
+
+# Binary configuration (CLI/demo tool)
+[[bin]]
+name = "l2-demo"
+path = "src/main.rs"
+
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
