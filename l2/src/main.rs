@@ -611,15 +611,20 @@ fn demo_serialization() {
     let p = BigUint::from_u64(17);
     let elem = FieldElement::from_u64(13, p);
     
-    let ser_fp = SerializableFieldElement::from_field_element(&elem);
-    println!("Field element in F_17:");
-    println!("  Value (base10): {}", ser_fp.value_base10);
-    println!("  Value (base16): {}", ser_fp.value_base16);
-    println!("  Value (base64): {}", ser_fp.value_base64);
-    println!("  Modulus:        {}", ser_fp.modulus_base10);
+    println!("Field element in F_17: {}", elem);
+    println!("\nChoose format at serialization time:");
     
-    let json_fp = ser_fp.to_json().unwrap();
-    println!("\nJSON representation:");
+    // Serialize in different formats
+    let ser_base10 = SerializableFieldElement::from_field_element(&elem, SerializationFormat::Base10);
+    let ser_base16 = SerializableFieldElement::from_field_element(&elem, SerializationFormat::Base16);
+    let ser_base64 = SerializableFieldElement::from_field_element(&elem, SerializationFormat::Base64);
+    
+    println!("  Base10: value={}, modulus={}", ser_base10.value, ser_base10.modulus);
+    println!("  Base16: value={}, modulus={}", ser_base16.value, ser_base16.modulus);
+    println!("  Base64: value={}, modulus={}", ser_base64.value, ser_base64.modulus);
+    
+    let json_fp = ser_base10.to_json().unwrap();
+    println!("\nJSON representation (Base10):");
     println!("{}", json_fp);
     
     // Round-trip JSON
@@ -633,12 +638,13 @@ fn demo_serialization() {
     let degree = 8;
     let bin_elem = BinaryFieldElement::from_u64(0x53, irreducible.clone(), degree);
     
-    let ser_bin = SerializableBinaryFieldElement::from_binary_field_element(&bin_elem);
+    // Serialize with hex format (common for binary fields)
+    let ser_bin = SerializableBinaryFieldElement::from_binary_field_element(&bin_elem, SerializationFormat::Base16);
     println!("Binary field element in F2^8:");
-    println!("  Value (hex):        {}", ser_bin.value_base16);
-    println!("  Value (base64):     {}", ser_bin.value_base64);
-    println!("  Irreducible (hex):  {}", ser_bin.irreducible_base16);
-    println!("  Degree:             {}", ser_bin.degree);
+    println!("  Value:        {}", ser_bin.value);
+    println!("  Irreducible:  {}", ser_bin.irreducible);
+    println!("  Degree:       {}", ser_bin.degree);
+    println!("  Format:       {:?}", ser_bin.format);
     
     let json_bin = ser_bin.to_json().unwrap();
     println!("\nJSON representation:");
@@ -656,7 +662,7 @@ fn demo_serialization() {
     let y = FieldElement::new(BigUint::from_u64(1), p_ec.clone());
     let point = l2::elliptic_curve::EllipticCurvePoint::Point { x, y };
     
-    let ser_point = SerializableECPoint::from_ec_point(&point);
+    let ser_point = SerializableECPoint::from_ec_point(&point, SerializationFormat::Base10);
     let json_point = ser_point.to_json().unwrap();
     println!("EC Point (5, 1) over F_17:");
     println!("{}", json_point);
@@ -667,7 +673,7 @@ fn demo_serialization() {
     
     // Point at infinity
     let infinity = l2::elliptic_curve::EllipticCurvePoint::<FieldElement>::Infinity;
-    let ser_inf = SerializableECPoint::from_ec_point(&infinity);
+    let ser_inf = SerializableECPoint::from_ec_point(&infinity, SerializationFormat::Base10);
     let json_inf = ser_inf.to_json().unwrap();
     println!("\nPoint at infinity:");
     println!("{}", json_inf);
@@ -677,7 +683,7 @@ fn demo_serialization() {
     let a = FieldElement::new(BigUint::from_u64(2), p_ec.clone());
     let b = FieldElement::new(BigUint::from_u64(2), p_ec.clone());
     
-    let ser_curve = SerializableEllipticCurve::new(&a, &b);
+    let ser_curve = SerializableEllipticCurve::new(&a, &b, SerializationFormat::Base10);
     let json_curve = ser_curve.to_json().unwrap();
     println!("Curve y^2 = x^3 + 2x + 2 over F_17:");
     println!("{}", json_curve);
@@ -693,28 +699,132 @@ fn demo_serialization() {
         y: y_bin 
     };
     
-    let ser_bin_point = SerializableBinaryECPoint::from_binary_ec_point(&bin_point);
+    let ser_bin_point = SerializableBinaryECPoint::from_binary_ec_point(&bin_point, SerializationFormat::Base16);
     let json_bin_point = ser_bin_point.to_json().unwrap();
     println!("Binary EC Point:");
     println!("{}", json_bin_point);
     
-    // 7. Interoperability Demonstration
-    println!("\n=== 7. Cross-Format Interoperability ===");
+    // 7. Polynomial Serialization
+    println!("\n=== 7. Polynomial Serialization ===");
+    let p_poly = BigUint::from_u64(17);
+    
+    // Create polynomial: 3 + 5X + 2X^2 over F_17
+    let poly_coeffs = vec![
+        FieldElement::new(BigUint::from_u64(3), p_poly.clone()),
+        FieldElement::new(BigUint::from_u64(5), p_poly.clone()),
+        FieldElement::new(BigUint::from_u64(2), p_poly.clone()),
+    ];
+    let poly = Polynomial::new(poly_coeffs);
+    
+    println!("Polynomial: {} (over F_17)", poly);
+    println!("Degree: {}", poly.degree());
+    
+    println!("\nSerialization with different formats:");
+    let ser_base10 = SerializablePolynomial::from_polynomial(&poly, SerializationFormat::Base10);
+    let ser_base16 = SerializablePolynomial::from_polynomial(&poly, SerializationFormat::Base16);
+    
+    println!("  Base10: {:?}", ser_base10.coefficients);
+    println!("  Base16: {:?}", ser_base16.coefficients);
+    println!("  Modulus (base10): {}", ser_base10.modulus);
+    
+    let json_poly = ser_base10.to_json().unwrap();
+    println!("\nJSON representation (Base10):");
+    println!("{}", json_poly);
+    
+    // Round-trip test
+    let deser_poly = SerializablePolynomial::from_json(&json_poly).unwrap();
+    let reconstructed_poly = deser_poly.to_polynomial().unwrap();
+    println!("Round-trip successful: {}", reconstructed_poly == poly);
+    
+    // Create polynomial from strings
+    let poly_from_strings = SerializablePolynomial::new(&["1", "0", "1"], "17", SerializationFormat::Base10).unwrap();
+    println!("\nPolynomial from strings (1 + 0X + 1X^2):");
+    println!("  Coefficients: {:?}", poly_from_strings.coefficients);
+    let poly_reconstructed = poly_from_strings.to_polynomial().unwrap();
+    println!("  Polynomial: {}", poly_reconstructed);
+    
+    // Test zero polynomial
+    let zero_poly: Polynomial<FieldElement> = Polynomial::zero();
+    let ser_zero = SerializablePolynomial::from_polynomial(&zero_poly, SerializationFormat::Base10);
+    println!("\nZero polynomial:");
+    println!("  Degree: {}", ser_zero.degree);
+    println!("  Coefficients: {:?}", ser_zero.coefficients);
+
+    // 8. Extension Field Element Serialization (Fields containing polynomials)
+    println!("\n=== 8. Extension Field Element (Fp^k) Serialization ===");
+    println!("Extension fields are fields where elements are polynomials!");
+    
+    // Work in F_{7^2} with irreducible polynomial X^2 + 1
+    let p_ext = BigUint::from_u64(7);
+    println!("\nWorking in F_7^2 with irreducible polynomial X^2 + 1");
+    
+    // Create irreducible polynomial: X^2 + 1
+    let irreducible_ext = Polynomial::new(vec![
+        FieldElement::from_u64(1, p_ext.clone()),  // constant term
+        FieldElement::from_u64(0, p_ext.clone()),  // X coefficient
+        FieldElement::from_u64(1, p_ext.clone()),  // X^2 coefficient
+    ]);
+    
+    // Create extension field element: 2 + 3X
+    let ext_elem = ExtensionFieldElement::from_coeffs(
+        vec![2, 3],
+        irreducible_ext.clone(),
+        p_ext.clone(),
+    );
+    
+    println!("Element: {} (a polynomial in the field!)", ext_elem);
+    
+    let ser_ext = SerializableExtensionFieldElement::from_extension_field_element(&ext_elem, SerializationFormat::Base10);
+    println!("\nElement coefficients: {:?}", ser_ext.coefficients);
+    println!("Irreducible polynomial coeffs: {:?}", ser_ext.irreducible_coeffs);
+    println!("Base field modulus: {}", ser_ext.modulus);
+    println!("Format: {:?}", ser_ext.format);
+    
+    let json_ext = ser_ext.to_json().unwrap();
+    println!("\nJSON representation:");
+    println!("{}", json_ext);
+    
+    // Round-trip test
+    let deser_ext = SerializableExtensionFieldElement::from_json(&json_ext).unwrap();
+    println!("Round-trip successful: {}", 
+        deser_ext.coefficients == ser_ext.coefficients);
+    
+    // Show that operations work in this field
+    let ext_elem2 = ExtensionFieldElement::from_coeffs(
+        vec![4, 5],
+        irreducible_ext.clone(),
+        p_ext.clone(),
+    );
+    let sum = &ext_elem + &ext_elem2;
+    let product = &ext_elem * &ext_elem2;
+    
+    println!("\nField operations in F_7^2:");
+    println!("  (2 + 3X) + (4 + 5X) = {}", sum);
+    println!("  (2 + 3X) * (4 + 5X) = {}", product);
+
+    // 9. Interoperability Demonstration
+    println!("\n=== 9. Cross-Format Interoperability ===");
     println!("Creating a field element from different input formats:");
+    println!("All represent 13 in F_17:\n");
     
-    let from_dec = SerializableFieldElement::from_base10("13", "17").unwrap();
-    let from_hex = SerializableFieldElement::from_base16("d", "11").unwrap();
-    let from_b64 = SerializableFieldElement::from_base64("DQ==", "EQ==").unwrap();
+    let from_dec = SerializableFieldElement::new("13", "17", SerializationFormat::Base10).unwrap();
+    let from_hex = SerializableFieldElement::new("d", "11", SerializationFormat::Base16).unwrap();
+    let from_b64 = SerializableFieldElement::new("DQ==", "EQ==", SerializationFormat::Base64).unwrap();
     
-    println!("From decimal: value={}, modulus={}", 
-        from_dec.value_base10, from_dec.modulus_base10);
-    println!("From hex:     value={}, modulus={}", 
-        from_hex.value_base10, from_hex.modulus_base10);
-    println!("From base64:  value={}, modulus={}", 
-        from_b64.value_base10, from_b64.modulus_base10);
+    println!("  Base10 format: value={}, modulus={}", from_dec.value, from_dec.modulus);
+    println!("  Base16 format: value={}, modulus={}", from_hex.value, from_hex.modulus);
+    println!("  Base64 format: value={}, modulus={}", from_b64.value, from_b64.modulus);
+    
+    // Verify they all decode to the same value
+    let elem1 = from_dec.to_field_element().unwrap();
+    let elem2 = from_hex.to_field_element().unwrap();
+    let elem3 = from_b64.to_field_element().unwrap();
+    println!("\nAll decode to same value: {}", elem1 == elem2 && elem2 == elem3);
     
     println!("\n✓ All serialization formats verified!");
     println!("✓ All structures support Base 10, Base 16, and Base64");
+    println!("✓ Polynomials can be serialized and deserialized");
+    println!("✓ Extension fields (polynomial fields) fully serializable");
     println!("✓ JSON serialization available for all types");
     println!("✓ Round-trip conversion verified");
     

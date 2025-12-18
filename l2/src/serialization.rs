@@ -9,67 +9,102 @@ use crate::binary_field::BinaryFieldElement;
 use crate::extension_field::ExtensionFieldElement;
 use crate::elliptic_curve::EllipticCurvePoint;
 use crate::binary_elliptic_curve::BinaryEllipticCurvePoint;
+use crate::polynomial::Polynomial;
 use serde::{Serialize, Deserialize};
 use base64::Engine;
+
+// ==================== Serialization Format Enum ====================
+
+/// Format for serializing numeric values
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum SerializationFormat {
+    #[serde(rename = "base10")]
+    #[default]
+    Base10,
+    #[serde(rename = "base16")]
+    Base16,
+    #[serde(rename = "base64")]
+    Base64,
+}
+
+impl SerializationFormat {
+    /// Convert BigUint to string in this format
+    pub fn encode(&self, value: &BigUint) -> String {
+        match self {
+            SerializationFormat::Base10 => value.to_base10(),
+            SerializationFormat::Base16 => value.to_base16(),
+            SerializationFormat::Base64 => value.to_base64(),
+        }
+    }
+
+    /// Parse string in this format to BigUint
+    pub fn decode(&self, s: &str) -> Result<BigUint, String> {
+        match self {
+            SerializationFormat::Base10 => BigUint::from_base10(s),
+            SerializationFormat::Base16 => BigUint::from_base16(s),
+            SerializationFormat::Base64 => BigUint::from_base64(s),
+        }
+    }
+
+    /// Encode bytes in this format
+    pub fn encode_bytes(&self, bytes: &[u8]) -> String {
+        match self {
+            SerializationFormat::Base10 => BigUint::from_bytes_be(bytes).to_base10(),
+            SerializationFormat::Base16 => bytes_to_hex(bytes),
+            SerializationFormat::Base64 => base64::engine::general_purpose::STANDARD.encode(bytes),
+        }
+    }
+
+    /// Decode bytes from this format
+    pub fn decode_bytes(&self, s: &str) -> Result<Vec<u8>, String> {
+        match self {
+            SerializationFormat::Base10 => {
+                let num = BigUint::from_base10(s)?;
+                Ok(num.to_bytes_be())
+            }
+            SerializationFormat::Base16 => hex_to_bytes(s),
+            SerializationFormat::Base64 => {
+                base64::engine::general_purpose::STANDARD.decode(s)
+                    .map_err(|e| format!("Base64 decode error: {}", e))
+            }
+        }
+    }
+}
 
 // ==================== Field Element Serialization ====================
 
 /// Serializable representation of a field element (Fp)
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SerializableFieldElement {
-    #[serde(rename = "value_base10")]
-    pub value_base10: String,
-    #[serde(rename = "value_base16")]
-    pub value_base16: String,
-    #[serde(rename = "value_base64")]
-    pub value_base64: String,
-    #[serde(rename = "modulus_base10")]
-    pub modulus_base10: String,
-    #[serde(rename = "modulus_base16")]
-    pub modulus_base16: String,
+    pub value: String,
+    pub modulus: String,
+    #[serde(default)]
+    pub format: SerializationFormat,
 }
 
 impl SerializableFieldElement {
-    /// Convert a FieldElement to serializable form
-    pub fn from_field_element(elem: &FieldElement) -> Self {
+    /// Convert a FieldElement to serializable form with specified format
+    pub fn from_field_element(elem: &FieldElement, format: SerializationFormat) -> Self {
         SerializableFieldElement {
-            value_base10: elem.value().to_base10(),
-            value_base16: elem.value().to_base16(),
-            value_base64: elem.value().to_base64(),
-            modulus_base10: elem.modulus().to_base10(),
-            modulus_base16: elem.modulus().to_base16(),
+            value: format.encode(elem.value()),
+            modulus: format.encode(elem.modulus()),
+            format,
         }
     }
 
-    /// Convert back to FieldElement (using base10 by default)
+    /// Convert back to FieldElement
     pub fn to_field_element(&self) -> Result<FieldElement, String> {
-        let value = BigUint::from_base10(&self.value_base10)?;
-        let modulus = BigUint::from_base10(&self.modulus_base10)?;
+        let value = self.format.decode(&self.value)?;
+        let modulus = self.format.decode(&self.modulus)?;
         Ok(FieldElement::new(value, modulus))
     }
 
-    /// Create from base10 strings
-    pub fn from_base10(value: &str, modulus: &str) -> Result<Self, String> {
-        let value_big = BigUint::from_base10(value)?;
-        let modulus_big = BigUint::from_base10(modulus)?;
+    /// Create from strings with specified format
+    pub fn new(value: &str, modulus: &str, format: SerializationFormat) -> Result<Self, String> {
+        let value_big = format.decode(value)?;
+        let modulus_big = format.decode(modulus)?;
         let elem = FieldElement::new(value_big, modulus_big);
-        Ok(Self::from_field_element(&elem))
-    }
-
-    /// Create from base16 strings
-    pub fn from_base16(value: &str, modulus: &str) -> Result<Self, String> {
-        let value_big = BigUint::from_base16(value)?;
-        let modulus_big = BigUint::from_base16(modulus)?;
-        let elem = FieldElement::new(value_big, modulus_big);
-        Ok(Self::from_field_element(&elem))
-    }
-
-    /// Create from base64 strings
-    pub fn from_base64(value: &str, modulus: &str) -> Result<Self, String> {
-        let value_big = BigUint::from_base64(value)?;
-        let modulus_big = BigUint::from_base64(modulus)?;
-        let elem = FieldElement::new(value_big, modulus_big);
-        Ok(Self::from_field_element(&elem))
+        Ok(Self::from_field_element(&elem, format))
     }
 
     /// Convert to JSON string
@@ -90,44 +125,41 @@ impl SerializableFieldElement {
 /// Serializable representation of a binary field element (F2^m)
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SerializableBinaryFieldElement {
-    #[serde(rename = "value_base16")]
-    pub value_base16: String,
-    #[serde(rename = "value_base64")]
-    pub value_base64: String,
-    #[serde(rename = "irreducible_base16")]
-    pub irreducible_base16: String,
+    pub value: String,
+    pub irreducible: String,
     pub degree: usize,
+    #[serde(default)]
+    pub format: SerializationFormat,
 }
 
 impl SerializableBinaryFieldElement {
-    /// Convert a BinaryFieldElement to serializable form
-    pub fn from_binary_field_element(elem: &BinaryFieldElement) -> Self {
+    /// Convert a BinaryFieldElement to serializable form with specified format
+    pub fn from_binary_field_element(elem: &BinaryFieldElement, format: SerializationFormat) -> Self {
         let value_bytes = elem.to_bytes();
         let irreducible_bytes = elem.irreducible();
         
         SerializableBinaryFieldElement {
-            value_base16: bytes_to_hex(&value_bytes),
-            value_base64: base64::engine::general_purpose::STANDARD.encode(&value_bytes),
-            irreducible_base16: bytes_to_hex(irreducible_bytes),
+            value: format.encode_bytes(&value_bytes),
+            irreducible: format.encode_bytes(irreducible_bytes),
             degree: elem.degree(),
+            format,
         }
     }
 
     /// Convert back to BinaryFieldElement
     pub fn to_binary_field_element(&self) -> Result<BinaryFieldElement, String> {
-        let value_bytes = hex_to_bytes(&self.value_base16)?;
-        let irreducible = hex_to_bytes(&self.irreducible_base16)?;
+        let value_bytes = self.format.decode_bytes(&self.value)?;
+        let irreducible = self.format.decode_bytes(&self.irreducible)?;
         
         Ok(BinaryFieldElement::new(value_bytes, irreducible, self.degree))
     }
 
-    /// Create from hex strings
-    #[allow(dead_code)]
-    pub fn from_base16(value: &str, irreducible: &str, degree: usize) -> Result<Self, String> {
-        let value_bytes = hex_to_bytes(value)?;
-        let irreducible_bytes = hex_to_bytes(irreducible)?;
+    /// Create from strings with specified format
+    pub fn new(value: &str, irreducible: &str, degree: usize, format: SerializationFormat) -> Result<Self, String> {
+        let value_bytes = format.decode_bytes(value)?;
+        let irreducible_bytes = format.decode_bytes(irreducible)?;
         let elem = BinaryFieldElement::new(value_bytes, irreducible_bytes, degree);
-        Ok(Self::from_binary_field_element(&elem))
+        Ok(Self::from_binary_field_element(&elem, format))
     }
 
     /// Convert to JSON string
@@ -147,43 +179,111 @@ impl SerializableBinaryFieldElement {
 
 /// Serializable representation of an extension field element (Fp^k)
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[allow(dead_code)]
 pub struct SerializableExtensionFieldElement {
-    #[serde(rename = "coefficients_base10")]
-    pub coefficients_base10: Vec<String>,
-    #[serde(rename = "coefficients_base16")]
-    pub coefficients_base16: Vec<String>,
-    #[serde(rename = "irreducible_coeffs_base10")]
-    pub irreducible_coeffs_base10: Vec<String>,
-    #[serde(rename = "modulus_base10")]
-    pub modulus_base10: String,
+    pub coefficients: Vec<String>,
+    pub irreducible_coeffs: Vec<String>,
+    pub modulus: String,
+    #[serde(default)]
+    pub format: SerializationFormat,
 }
 
 impl SerializableExtensionFieldElement {
-    /// Convert an ExtensionFieldElement to serializable form
-    #[allow(dead_code)]
-    pub fn from_extension_field_element(elem: &ExtensionFieldElement) -> Self {
+    /// Convert an ExtensionFieldElement to serializable form with specified format
+    pub fn from_extension_field_element(elem: &ExtensionFieldElement, format: SerializationFormat) -> Self {
         let coeffs = elem.coefficients();
         let irreducible_coeffs = elem.irreducible().coeffs();
         
         SerializableExtensionFieldElement {
-            coefficients_base10: coeffs.iter().map(|c| c.value().to_base10()).collect(),
-            coefficients_base16: coeffs.iter().map(|c| c.value().to_base16()).collect(),
-            irreducible_coeffs_base10: irreducible_coeffs.iter()
-                .map(|c| c.value().to_base10()).collect(),
-            modulus_base10: elem.modulus().to_base10(),
+            coefficients: coeffs.iter().map(|c| format.encode(c.value())).collect(),
+            irreducible_coeffs: irreducible_coeffs.iter()
+                .map(|c| format.encode(c.value())).collect(),
+            modulus: format.encode(elem.modulus()),
+            format,
         }
     }
 
     /// Convert to JSON string
-    #[allow(dead_code)]
     pub fn to_json(&self) -> Result<String, String> {
         serde_json::to_string_pretty(self)
             .map_err(|e| format!("JSON serialization error: {}", e))
     }
 
     /// Create from JSON string
-    #[allow(dead_code)]
+    pub fn from_json(json: &str) -> Result<Self, String> {
+        serde_json::from_str(json)
+            .map_err(|e| format!("JSON deserialization error: {}", e))
+    }
+}
+
+// ==================== Polynomial Serialization ====================
+
+/// Serializable representation of a polynomial over Fp
+/// Stores coefficients from lowest to highest degree: [a0, a1, a2, ...] = a0 + a1*X + a2*X^2 + ...
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct SerializablePolynomial {
+    pub coefficients: Vec<String>,
+    pub modulus: String,
+    pub degree: i32,
+    #[serde(default)]
+    pub format: SerializationFormat,
+}
+
+impl SerializablePolynomial {
+    /// Convert a Polynomial<FieldElement> to serializable form with specified format
+    pub fn from_polynomial(poly: &Polynomial<FieldElement>, format: SerializationFormat) -> Self {
+        let coeffs = poly.coeffs();
+        let modulus = if !coeffs.is_empty() {
+            format.encode(coeffs[0].modulus())
+        } else {
+            "0".to_string()
+        };
+        
+        SerializablePolynomial {
+            coefficients: coeffs.iter().map(|c| format.encode(c.value())).collect(),
+            modulus,
+            degree: poly.degree(),
+            format,
+        }
+    }
+
+    /// Convert back to Polynomial<FieldElement>
+    pub fn to_polynomial(&self) -> Result<Polynomial<FieldElement>, String> {
+        if self.coefficients.is_empty() {
+            return Ok(Polynomial::zero());
+        }
+        
+        let modulus = self.format.decode(&self.modulus)?;
+        let coeffs: Result<Vec<FieldElement>, String> = self.coefficients.iter()
+            .map(|c| {
+                let value = self.format.decode(c)?;
+                Ok(FieldElement::new(value, modulus.clone()))
+            })
+            .collect();
+        
+        Ok(Polynomial::new(coeffs?))
+    }
+
+    /// Create from coefficient strings with specified format
+    pub fn new(coeffs: &[&str], modulus: &str, format: SerializationFormat) -> Result<Self, String> {
+        let modulus_big = format.decode(modulus)?;
+        let field_coeffs: Result<Vec<FieldElement>, String> = coeffs.iter()
+            .map(|c| {
+                let value = format.decode(c)?;
+                Ok(FieldElement::new(value, modulus_big.clone()))
+            })
+            .collect();
+        
+        let poly = Polynomial::new(field_coeffs?);
+        Ok(Self::from_polynomial(&poly, format))
+    }
+
+    /// Convert to JSON string
+    pub fn to_json(&self) -> Result<String, String> {
+        serde_json::to_string_pretty(self)
+            .map_err(|e| format!("JSON serialization error: {}", e))
+    }
+
+    /// Create from JSON string
     pub fn from_json(json: &str) -> Result<Self, String> {
         serde_json::from_str(json)
             .map_err(|e| format!("JSON deserialization error: {}", e))
@@ -197,30 +297,28 @@ impl SerializableExtensionFieldElement {
 #[serde(tag = "type")]
 pub enum SerializableECPoint {
     #[serde(rename = "infinity")]
-    Infinity,
+    Infinity {
+        #[serde(default)]
+        format: SerializationFormat,
+    },
     #[serde(rename = "point")]
     Point {
-        x_base10: String,
-        x_base16: String,
-        x_base64: String,
-        y_base10: String,
-        y_base16: String,
-        y_base64: String,
+        x: String,
+        y: String,
+        #[serde(default)]
+        format: SerializationFormat,
     },
 }
 
 impl SerializableECPoint {
-    /// Convert an EllipticCurvePoint to serializable form
-    pub fn from_ec_point(point: &EllipticCurvePoint<FieldElement>) -> Self {
+    /// Convert an EllipticCurvePoint to serializable form with specified format
+    pub fn from_ec_point(point: &EllipticCurvePoint<FieldElement>, format: SerializationFormat) -> Self {
         match point {
-            EllipticCurvePoint::Infinity => SerializableECPoint::Infinity,
+            EllipticCurvePoint::Infinity => SerializableECPoint::Infinity { format },
             EllipticCurvePoint::Point { x, y } => SerializableECPoint::Point {
-                x_base10: x.value().to_base10(),
-                x_base16: x.value().to_base16(),
-                x_base64: x.value().to_base64(),
-                y_base10: y.value().to_base10(),
-                y_base16: y.value().to_base16(),
-                y_base64: y.value().to_base64(),
+                x: format.encode(x.value()),
+                y: format.encode(y.value()),
+                format,
             },
         }
     }
@@ -228,24 +326,24 @@ impl SerializableECPoint {
     /// Get compressed point format (x-coordinate only + sign bit)
     pub fn to_compressed(&self) -> Result<String, String> {
         match self {
-            SerializableECPoint::Infinity => Ok("infinity".to_string()),
-            SerializableECPoint::Point { x_base16, y_base10, .. } => {
-                let y = BigUint::from_base10(y_base10)?;
-                let prefix = if y.is_even() { "02" } else { "03" };
-                Ok(format!("{}{}", prefix, x_base16))
+            SerializableECPoint::Infinity { .. } => Ok("infinity".to_string()),
+            SerializableECPoint::Point { x, y, format } => {
+                let y_big = format.decode(y)?;
+                let prefix = if y_big.is_even() { "02" } else { "03" };
+                // For compression, always use hex
+                let x_hex = SerializationFormat::Base16.encode(&format.decode(x)?);
+                Ok(format!("{}{}", prefix, x_hex))
             }
         }
     }
 
     /// Convert to JSON string
-    #[allow(dead_code)]
     pub fn to_json(&self) -> Result<String, String> {
         serde_json::to_string_pretty(self)
             .map_err(|e| format!("JSON serialization error: {}", e))
     }
 
     /// Create from JSON string
-    #[allow(dead_code)]
     pub fn from_json(json: &str) -> Result<Self, String> {
         serde_json::from_str(json)
             .map_err(|e| format!("JSON deserialization error: {}", e))
@@ -255,39 +353,33 @@ impl SerializableECPoint {
 /// Serializable representation of an elliptic curve over Fp
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SerializableEllipticCurve {
-    #[serde(rename = "curve_equation")]
     pub curve_equation: String, // "y^2 = x^3 + ax + b"
-    pub a_base10: String,
-    pub a_base16: String,
-    pub b_base10: String,
-    pub b_base16: String,
-    pub modulus_base10: String,
-    pub modulus_base16: String,
+    pub a: String,
+    pub b: String,
+    pub modulus: String,
+    #[serde(default)]
+    pub format: SerializationFormat,
 }
 
 impl SerializableEllipticCurve {
-    /// Create from curve parameters
-    pub fn new(a: &FieldElement, b: &FieldElement) -> Self {
+    /// Create from curve parameters with specified format
+    pub fn new(a: &FieldElement, b: &FieldElement, format: SerializationFormat) -> Self {
         SerializableEllipticCurve {
             curve_equation: "y^2 = x^3 + ax + b".to_string(),
-            a_base10: a.value().to_base10(),
-            a_base16: a.value().to_base16(),
-            b_base10: b.value().to_base10(),
-            b_base16: b.value().to_base16(),
-            modulus_base10: a.modulus().to_base10(),
-            modulus_base16: a.modulus().to_base16(),
+            a: format.encode(a.value()),
+            b: format.encode(b.value()),
+            modulus: format.encode(a.modulus()),
+            format,
         }
     }
 
     /// Convert to JSON string
-    #[allow(dead_code)]
     pub fn to_json(&self) -> Result<String, String> {
         serde_json::to_string_pretty(self)
             .map_err(|e| format!("JSON serialization error: {}", e))
     }
 
     /// Create from JSON string
-    #[allow(dead_code)]
     pub fn from_json(json: &str) -> Result<Self, String> {
         serde_json::from_str(json)
             .map_err(|e| format!("JSON deserialization error: {}", e))
@@ -301,44 +393,44 @@ impl SerializableEllipticCurve {
 #[serde(tag = "type")]
 pub enum SerializableBinaryECPoint {
     #[serde(rename = "infinity")]
-    Infinity,
+    Infinity {
+        #[serde(default)]
+        format: SerializationFormat,
+    },
     #[serde(rename = "point")]
     Point {
-        x_base16: String,
-        x_base64: String,
-        y_base16: String,
-        y_base64: String,
+        x: String,
+        y: String,
+        #[serde(default)]
+        format: SerializationFormat,
     },
 }
 
 impl SerializableBinaryECPoint {
-    /// Convert a BinaryEllipticCurvePoint to serializable form
-    pub fn from_binary_ec_point(point: &BinaryEllipticCurvePoint) -> Self {
+    /// Convert a BinaryEllipticCurvePoint to serializable form with specified format
+    pub fn from_binary_ec_point(point: &BinaryEllipticCurvePoint, format: SerializationFormat) -> Self {
         match point {
-            BinaryEllipticCurvePoint::Infinity => SerializableBinaryECPoint::Infinity,
+            BinaryEllipticCurvePoint::Infinity => SerializableBinaryECPoint::Infinity { format },
             BinaryEllipticCurvePoint::Point { x, y } => {
                 let x_bytes = x.to_bytes();
                 let y_bytes = y.to_bytes();
                 
                 SerializableBinaryECPoint::Point {
-                    x_base16: bytes_to_hex(&x_bytes),
-                    x_base64: base64::engine::general_purpose::STANDARD.encode(&x_bytes),
-                    y_base16: bytes_to_hex(&y_bytes),
-                    y_base64: base64::engine::general_purpose::STANDARD.encode(&y_bytes),
+                    x: format.encode_bytes(&x_bytes),
+                    y: format.encode_bytes(&y_bytes),
+                    format,
                 }
             }
         }
     }
 
     /// Convert to JSON string
-    #[allow(dead_code)]
     pub fn to_json(&self) -> Result<String, String> {
         serde_json::to_string_pretty(self)
             .map_err(|e| format!("JSON serialization error: {}", e))
     }
 
     /// Create from JSON string
-    #[allow(dead_code)]
     pub fn from_json(json: &str) -> Result<Self, String> {
         serde_json::from_str(json)
             .map_err(|e| format!("JSON deserialization error: {}", e))
@@ -347,38 +439,36 @@ impl SerializableBinaryECPoint {
 
 /// Serializable representation of a binary elliptic curve
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[allow(dead_code)]
 pub struct SerializableBinaryEllipticCurve {
-    #[serde(rename = "curve_equation")]
     pub curve_equation: String, // "y^2 + xy = x^3 + ax^2 + b"
-    pub a_base16: String,
-    pub b_base16: String,
-    pub irreducible_base16: String,
+    pub a: String,
+    pub b: String,
+    pub irreducible: String,
     pub degree: usize,
+    #[serde(default)]
+    pub format: SerializationFormat,
 }
 
 impl SerializableBinaryEllipticCurve {
-    /// Create from curve parameters
-    #[allow(dead_code)]
-    pub fn new(a: &BinaryFieldElement, b: &BinaryFieldElement) -> Self {
+    /// Create from curve parameters with specified format
+    pub fn new(a: &BinaryFieldElement, b: &BinaryFieldElement, format: SerializationFormat) -> Self {
         SerializableBinaryEllipticCurve {
             curve_equation: "y^2 + xy = x^3 + ax^2 + b".to_string(),
-            a_base16: bytes_to_hex(&a.to_bytes()),
-            b_base16: bytes_to_hex(&b.to_bytes()),
-            irreducible_base16: bytes_to_hex(a.irreducible()),
+            a: format.encode_bytes(&a.to_bytes()),
+            b: format.encode_bytes(&b.to_bytes()),
+            irreducible: format.encode_bytes(a.irreducible()),
             degree: a.degree(),
+            format,
         }
     }
 
     /// Convert to JSON string
-    #[allow(dead_code)]
     pub fn to_json(&self) -> Result<String, String> {
         serde_json::to_string_pretty(self)
             .map_err(|e| format!("JSON serialization error: {}", e))
     }
 
     /// Create from JSON string
-    #[allow(dead_code)]
     pub fn from_json(json: &str) -> Result<Self, String> {
         serde_json::from_str(json)
             .map_err(|e| format!("JSON deserialization error: {}", e))
@@ -464,9 +554,10 @@ mod tests {
         let p = BigUint::from_u64(17);
         let elem = FieldElement::from_u64(5, p);
         
-        let ser = SerializableFieldElement::from_field_element(&elem);
-        assert_eq!(ser.value_base10, "5");
-        assert_eq!(ser.modulus_base10, "17");
+        let ser = SerializableFieldElement::from_field_element(&elem, SerializationFormat::Base10);
+        assert_eq!(ser.value, "5");
+        assert_eq!(ser.modulus, "17");
+        assert_eq!(ser.format, SerializationFormat::Base10);
         
         let json = ser.to_json().unwrap();
         let deser = SerializableFieldElement::from_json(&json).unwrap();
@@ -481,7 +572,7 @@ mod tests {
         let degree = 4;
         let elem = BinaryFieldElement::from_u64(0b1010, irreducible.clone(), degree);
         
-        let ser = SerializableBinaryFieldElement::from_binary_field_element(&elem);
+        let ser = SerializableBinaryFieldElement::from_binary_field_element(&elem, SerializationFormat::Base16);
         
         let json = ser.to_json().unwrap();
         let deser = SerializableBinaryFieldElement::from_json(&json).unwrap();
@@ -497,13 +588,13 @@ mod tests {
         let y = FieldElement::new(BigUint::from_u64(1), p.clone());
         let point = EllipticCurvePoint::<FieldElement>::Point { x, y };
         
-        let ser = SerializableECPoint::from_ec_point(&point);
+        let ser = SerializableECPoint::from_ec_point(&point, SerializationFormat::Base10);
         let json = ser.to_json().unwrap();
         let deser = SerializableECPoint::from_json(&json).unwrap();
         
         match (ser, deser) {
-            (SerializableECPoint::Point { x_base10: x1, y_base10: y1, .. },
-             SerializableECPoint::Point { x_base10: x2, y_base10: y2, .. }) => {
+            (SerializableECPoint::Point { x: x1, y: y1, .. },
+             SerializableECPoint::Point { x: x2, y: y2, .. }) => {
                 assert_eq!(x1, x2);
                 assert_eq!(y1, y2);
             }
@@ -514,12 +605,12 @@ mod tests {
     #[test]
     fn test_infinity_point_serialization() {
         let point = EllipticCurvePoint::<FieldElement>::Infinity;
-        let ser = SerializableECPoint::from_ec_point(&point);
+        let ser = SerializableECPoint::from_ec_point(&point, SerializationFormat::Base10);
         
         let json = ser.to_json().unwrap();
         let deser = SerializableECPoint::from_json(&json).unwrap();
         
-        assert!(matches!(deser, SerializableECPoint::Infinity));
+        assert!(matches!(deser, SerializableECPoint::Infinity { .. }));
     }
 
     #[test]
@@ -538,5 +629,63 @@ mod tests {
         // Base 64
         let b64 = num.to_base64();
         assert_eq!(BigUint::from_base64(&b64).unwrap(), num);
+    }
+
+    #[test]
+    fn test_polynomial_serialization() {
+        // Create a polynomial: 3 + 5x + 2x^2 over F_17
+        let p = BigUint::from_u64(17);
+        let coeffs = vec![
+            FieldElement::new(BigUint::from_u64(3), p.clone()),
+            FieldElement::new(BigUint::from_u64(5), p.clone()),
+            FieldElement::new(BigUint::from_u64(2), p.clone()),
+        ];
+        let poly = Polynomial::new(coeffs);
+        
+        // Serialize
+        let ser = SerializablePolynomial::from_polynomial(&poly, SerializationFormat::Base10);
+        assert_eq!(ser.coefficients, vec!["3", "5", "2"]);
+        assert_eq!(ser.modulus, "17");
+        assert_eq!(ser.degree, 2);
+        assert_eq!(ser.format, SerializationFormat::Base10);
+        
+        // JSON round trip
+        let json = ser.to_json().unwrap();
+        let deser = SerializablePolynomial::from_json(&json).unwrap();
+        
+        // Deserialize back
+        let poly2 = deser.to_polynomial().unwrap();
+        assert_eq!(poly, poly2);
+    }
+
+    #[test]
+    fn test_polynomial_with_formats() {
+        // Create polynomial from strings with different formats
+        let coeffs = vec!["1", "2", "3"];
+        let ser = SerializablePolynomial::new(&coeffs, "17", SerializationFormat::Base10).unwrap();
+        
+        assert_eq!(ser.coefficients, vec!["1", "2", "3"]);
+        assert_eq!(ser.degree, 2);
+        
+        let poly = ser.to_polynomial().unwrap();
+        assert_eq!(poly.degree(), 2);
+        
+        // Test with hex format
+        let ser_hex = SerializablePolynomial::new(&["a", "b", "c"], "11", SerializationFormat::Base16).unwrap();
+        assert_eq!(ser_hex.format, SerializationFormat::Base16);
+    }
+
+    #[test]
+    fn test_zero_polynomial_serialization() {
+        // Test zero polynomial
+        let poly: Polynomial<FieldElement> = Polynomial::zero();
+        
+        let ser = SerializablePolynomial::from_polynomial(&poly, SerializationFormat::Base10);
+        assert_eq!(ser.coefficients.len(), 0);
+        assert_eq!(ser.degree, -1);
+        
+        let poly2 = ser.to_polynomial().unwrap();
+        assert!(poly2.is_zero());
+        assert_eq!(poly2.degree(), -1);
     }
 }

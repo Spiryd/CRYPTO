@@ -59,9 +59,11 @@ pub use binary_elliptic_curve::{BinaryEllipticCurve, BinaryEllipticCurvePoint};
 
 // Re-export serialization utilities
 pub use serialization::{
+    SerializationFormat,
     SerializableFieldElement,
     SerializableBinaryFieldElement,
     SerializableExtensionFieldElement,
+    SerializablePolynomial,
     SerializableECPoint,
     SerializableBinaryECPoint,
     SerializableEllipticCurve,
