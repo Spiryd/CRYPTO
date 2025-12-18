@@ -386,4 +386,46 @@ mod tests {
         // Need to reduce: divide by X^2 + 2
         assert!(!prod.is_zero());
     }
+    
+    #[test]
+    fn test_extension_field_exponentiation() {
+        // Work in F_{7^2} with irreducible polynomial X^2 + 1
+        let p = BigUint::from_u64(7);
+        
+        // Create irreducible polynomial: X^2 + 1
+        let irreducible = Polynomial::new(vec![
+            FieldElement::from_u64(1, p.clone()),
+            FieldElement::from_u64(0, p.clone()),
+            FieldElement::from_u64(1, p.clone()),
+        ]);
+        
+        // Create element: 2 + 3X
+        let a = ExtensionFieldElement::from_coeffs(
+            vec![2, 3],
+            irreducible.clone(),
+            p.clone(),
+        );
+        
+        // Test a^0 = 1
+        let result = a.pow(&BigUint::from_u64(0));
+        assert_eq!(result.poly().get_coeff(0).unwrap().value(), &BigUint::from_u64(1));
+        assert_eq!(result.poly().degree(), 0);
+        
+        // Test a^1 = a
+        let result = a.pow(&BigUint::from_u64(1));
+        assert_eq!(result.poly().get_coeff(0).unwrap().value(), &BigUint::from_u64(2));
+        assert_eq!(result.poly().get_coeff(1).unwrap().value(), &BigUint::from_u64(3));
+        
+        // Test a^2
+        let result = a.pow(&BigUint::from_u64(2));
+        let expected = &a * &a;
+        assert_eq!(result.poly().get_coeff(0).unwrap().value(), 
+                   expected.poly().get_coeff(0).unwrap().value());
+        
+        // Test that a^(p^k - 1) = 1 for non-zero a (Fermat's Little Theorem)
+        // In F_{7^2}, order is 7^2 - 1 = 48
+        let result = a.pow(&BigUint::from_u64(48));
+        assert_eq!(result.poly().get_coeff(0).unwrap().value(), &BigUint::from_u64(1));
+        assert_eq!(result.poly().degree(), 0);
+    }
 }

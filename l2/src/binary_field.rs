@@ -551,4 +551,39 @@ mod tests {
             assert_eq!(product.bits[0] & 0x0F, 1);
         }
     }
+    
+    #[test]
+    fn test_binary_field_exponentiation() {
+        // F_{2^4} with irreducible polynomial X^4 + X + 1 = 0b10011
+        let irreducible = vec![0b00010011];
+        let degree = 4;
+        
+        let a = BinaryFieldElement::from_u64(0b0011, irreducible.clone(), degree); // X + 1
+        
+        // Test a^0 = 1
+        let result = a.pow(&BigUint::from_u64(0));
+        assert_eq!(result.bits[0] & 0x0F, 1);
+        
+        // Test a^1 = a
+        let result = a.pow(&BigUint::from_u64(1));
+        assert_eq!(result.bits[0] & 0x0F, 0b0011);
+        
+        // Test a^2 = a * a
+        let result = a.pow(&BigUint::from_u64(2));
+        let expected = &a * &a;
+        assert_eq!(result.bits[0] & 0x0F, expected.bits[0] & 0x0F);
+        
+        // Test that a^(2^k - 1) = 1 for non-zero a (Fermat's Little Theorem)
+        // In F_{2^4}, order is 2^4 - 1 = 15
+        let result = a.pow(&BigUint::from_u64(15));
+        assert_eq!(result.bits[0] & 0x0F, 1);
+        
+        // Test larger exponent
+        let result = a.pow(&BigUint::from_u64(7));
+        let mut expected = a.clone();
+        for _ in 0..6 {
+            expected = &expected * &a;
+        }
+        assert_eq!(result.bits[0] & 0x0F, expected.bits[0] & 0x0F);
+    }
 }
