@@ -28,25 +28,7 @@ pub trait Field: Sized + Clone + PartialEq {
     
     /// Exponentiation with efficient square-and-multiply algorithm
     /// Complexity: O(log(exp)) multiplications
-    fn pow(&self, exp: &BigUint) -> Self {
-        if exp.is_zero() {
-            return Self::one();
-        }
-        
-        let mut result = Self::one();
-        let mut base = self.clone();
-        let mut e = exp.clone();
-        
-        while !e.is_zero() {
-            if e.get_bit(0) {
-                result = result.mul(&base);
-            }
-            base = base.mul(&base);
-            e = &e >> 1;
-        }
-        
-        result
-    }
+    fn pow(&self, exp: &BigUint) -> Self;
     
     /// Additive identity (0)
     fn zero() -> Self;

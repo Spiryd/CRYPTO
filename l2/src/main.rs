@@ -634,7 +634,7 @@ fn demo_serialization() {
     
     // 3. Binary Field Element (F2^m) Serialization
     println!("\n=== 3. Binary Field Element (F2^8) Serialization ===");
-    let irreducible = vec![0b00011011, 0b00000001]; // AES polynomial
+    let irreducible: Vec<u8> = vec![0b00011011, 0b00000001];
     let degree = 8;
     let bin_elem = BinaryFieldElement::from_u64(0x53, irreducible.clone(), degree);
     
