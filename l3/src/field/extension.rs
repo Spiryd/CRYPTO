@@ -230,6 +230,14 @@ impl<C: FieldConfig<N>, const N: usize, const K: usize> ExtensionField<C, N, K> 
     pub fn from_coeffs(coeffs: [BigInt<N>; K]) -> Self {
         Self::new(Poly { coeffs })
     }
+
+    /// Gets the polynomial coefficients
+    ///
+    /// # Returns
+    /// A reference to the array of coefficients
+    pub fn coefficients(&self) -> &[BigInt<N>; K] {
+        &self.poly.coeffs
+    }
 }
 
 impl<C: FieldConfig<N>, const N: usize, const K: usize> PartialEq for ExtensionField<C, N, K> {

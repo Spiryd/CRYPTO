@@ -130,6 +130,46 @@ impl<const N: usize> BigInt<N> {
         self.limbs[0] == 1 && self.limbs[1..].iter().all(|&limb| limb == 0)
     }
 
+    /// Returns the bit length (position of highest set bit + 1)
+    ///
+    /// Returns 0 for zero.
+    pub fn bit_length(&self) -> usize {
+        for i in (0..N).rev() {
+            if self.limbs[i] != 0 {
+                let leading_zeros = self.limbs[i].leading_zeros() as usize;
+                return (i + 1) * 64 - leading_zeros;
+            }
+        }
+        0
+    }
+
+    /// Converts to hexadecimal string (big-endian, without 0x prefix)
+    ///
+    /// Returns uppercase hex string with no leading zeros.
+    pub fn to_hex(&self) -> String {
+        // Find the most significant non-zero limb
+        let mut start = N;
+        for i in (0..N).rev() {
+            if self.limbs[i] != 0 {
+                start = i;
+                break;
+            }
+        }
+
+        // If all limbs are zero
+        if start == N {
+            return "00".to_string();
+        }
+
+        // Build hex string from most significant limb to least
+        let mut hex = format!("{:X}", self.limbs[start]);
+        for i in (0..start).rev() {
+            hex.push_str(&format!("{:016X}", self.limbs[i]));
+        }
+
+        hex
+    }
+
     /// Compares this BigInt with another
     ///
     /// Returns Ordering::Less, Ordering::Equal, or Ordering::Greater

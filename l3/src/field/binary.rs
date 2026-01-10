@@ -113,6 +113,14 @@ impl<C: FieldConfig<N>, const N: usize, const K: usize> BinaryField<C, N, K> {
         &self.bits
     }
 
+    /// Gets the underlying bit representation
+    ///
+    /// # Returns
+    /// A reference to the bit pattern as a BigInt
+    pub fn bits(&self) -> &BigInt<N> {
+        &self.bits
+    }
+
     /// Gets the bit at position i (coefficient of x^i)
     ///
     /// # Arguments

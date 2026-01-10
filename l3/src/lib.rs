@@ -15,3 +15,7 @@ pub mod field;
 pub mod field_trait;
 /// GHASH algorithm for Galois/Counter Mode (GCM)
 pub mod ghash;
+/// Schnorr digital signature scheme
+pub mod schnorr;
+/// Schnorr encoding implementations for field types
+pub mod schnorr_encoding;

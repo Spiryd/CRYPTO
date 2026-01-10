@@ -556,7 +556,7 @@ mod tests {
         // Test that [2]G gives same result whether computed as 2*G or G+G
         let sk = 2;
         let result = DHEC::<Fp97>::compute_public_key(&params, &sk);
-        
+
         assert_ne!(result, Point::Infinity);
         assert_ne!(result, params.generator);
     }

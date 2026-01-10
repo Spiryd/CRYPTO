@@ -78,19 +78,22 @@ fn test_field_exponentiation_timing() {
     // Test vectors with SAME bit length (8 bits) but different Hamming weights
     // All have MSB set to ensure same bit length processing
     let test_cases = vec![
-        ("0x80 (HW=1)",  vec![0x80u8]),  // 1000_0000
-        ("0x81 (HW=2)",  vec![0x81u8]),  // 1000_0001
-        ("0x83 (HW=3)",  vec![0x83u8]),  // 1000_0011
-        ("0x87 (HW=4)",  vec![0x87u8]),  // 1000_0111
-        ("0x8F (HW=5)",  vec![0x8Fu8]),  // 1000_1111
-        ("0x9F (HW=6)",  vec![0x9Fu8]),  // 1001_1111
-        ("0xBF (HW=7)",  vec![0xBFu8]),  // 1011_1111
-        ("0xFF (HW=8)",  vec![0xFFu8]),  // 1111_1111
+        ("0x80 (HW=1)", vec![0x80u8]), // 1000_0000
+        ("0x81 (HW=2)", vec![0x81u8]), // 1000_0001
+        ("0x83 (HW=3)", vec![0x83u8]), // 1000_0011
+        ("0x87 (HW=4)", vec![0x87u8]), // 1000_0111
+        ("0x8F (HW=5)", vec![0x8Fu8]), // 1000_1111
+        ("0x9F (HW=6)", vec![0x9Fu8]), // 1001_1111
+        ("0xBF (HW=7)", vec![0xBFu8]), // 1011_1111
+        ("0xFF (HW=8)", vec![0xFFu8]), // 1111_1111
     ];
 
     println!("Base: {:?}", base);
     println!("Iterations per test: {}\n", iterations);
-    println!("{:<20} {:<15} {:<20}", "Exponent", "Hamming Weight", "Avg Time (ns)");
+    println!(
+        "{:<20} {:<15} {:<20}",
+        "Exponent", "Hamming Weight", "Avg Time (ns)"
+    );
     println!("{}", "─".repeat(60));
 
     let mut times = Vec::new();
@@ -117,7 +120,7 @@ fn test_field_exponentiation_timing() {
     println!("{}", "─".repeat(60));
     println!("Mean time: {:.2} ns", mean);
     println!("Std deviation: {:.2} ns ({:.2}%)", std_dev, coeff_variation);
-    
+
     if coeff_variation < 1.0 {
         println!("✓ PASS: Coefficient of variation < 1% (constant-time)");
     } else {
@@ -147,18 +150,21 @@ fn test_scalar_multiplication_timing() {
     // Test vectors with SAME bit length but different Hamming weights
     // All start with 0x80 to ensure same bit length
     let test_cases = vec![
-        ("0x80 (HW=1)",  vec![0x80u8]),  // 1000_0000
-        ("0x81 (HW=2)",  vec![0x81u8]),  // 1000_0001
-        ("0x87 (HW=4)",  vec![0x87u8]),  // 1000_0111
-        ("0x8F (HW=5)",  vec![0x8Fu8]),  // 1000_1111
-        ("0xBF (HW=7)",  vec![0xBFu8]),  // 1011_1111
-        ("0xFF (HW=8)",  vec![0xFFu8]),  // 1111_1111
+        ("0x80 (HW=1)", vec![0x80u8]), // 1000_0000
+        ("0x81 (HW=2)", vec![0x81u8]), // 1000_0001
+        ("0x87 (HW=4)", vec![0x87u8]), // 1000_0111
+        ("0x8F (HW=5)", vec![0x8Fu8]), // 1000_1111
+        ("0xBF (HW=7)", vec![0xBFu8]), // 1011_1111
+        ("0xFF (HW=8)", vec![0xFFu8]), // 1111_1111
     ];
 
     println!("Curve: y² = x³ + 2x + 3 over F_97");
     println!("Point: ({:?}, {:?})", point, point);
     println!("Iterations per test: {}\n", iterations);
-    println!("{:<20} {:<15} {:<20}", "Scalar", "Hamming Weight", "Avg Time (ns)");
+    println!(
+        "{:<20} {:<15} {:<20}",
+        "Scalar", "Hamming Weight", "Avg Time (ns)"
+    );
     println!("{}", "─".repeat(60));
 
     let mut times = Vec::new();
@@ -185,7 +191,7 @@ fn test_scalar_multiplication_timing() {
     println!("{}", "─".repeat(60));
     println!("Mean time: {:.2} ns", mean);
     println!("Std deviation: {:.2} ns ({:.2}%)", std_dev, coeff_variation);
-    
+
     if coeff_variation < 2.0 {
         println!("✓ PASS: Coefficient of variation < 2% (constant-time)");
     } else {
@@ -207,7 +213,7 @@ fn test_different_bit_lengths() {
     let iterations = 10000;
 
     let test_cases = vec![
-        ("8-bit (0xFF)",   vec![0xFFu8]),
+        ("8-bit (0xFF)", vec![0xFFu8]),
         ("16-bit (0xFFFF)", vec![0xFF, 0xFF]),
         ("24-bit (all 1s)", vec![0xFF, 0xFF, 0xFF]),
         ("32-bit (all 1s)", vec![0xFF, 0xFF, 0xFF, 0xFF]),
@@ -215,7 +221,10 @@ fn test_different_bit_lengths() {
 
     println!("Testing that execution time scales with bit length");
     println!("(not with Hamming weight)\n");
-    println!("{:<20} {:<15} {:<20}", "Exponent", "Bit Length", "Avg Time (ns)");
+    println!(
+        "{:<20} {:<15} {:<20}",
+        "Exponent", "Bit Length", "Avg Time (ns)"
+    );
     println!("{}", "─".repeat(60));
 
     for (name, exp) in test_cases {
@@ -229,7 +238,7 @@ fn test_different_bit_lengths() {
         let avg_time_ns = avg_time * 1_000_000_000.0;
         println!("{:<20} {:<15} {:<20.2}", name, bit_length, avg_time_ns);
     }
-    
+
     println!("\n✓ Time should increase linearly with bit length");
     println!("✓ Time should NOT depend on Hamming weight");
     println!();
