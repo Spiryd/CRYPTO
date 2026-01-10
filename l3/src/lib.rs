@@ -5,6 +5,8 @@
 
 /// Big integer arithmetic module for finite field implementation
 pub mod bigint;
+/// Diffie-Hellman key exchange protocol for various algebraic structures
+pub mod diffie_hellman;
 /// Elliptic curve groups over finite fields
 pub mod elliptic_curve;
 /// Finite field implementations (F_p, F_p^k, F_2^k)
