@@ -18,8 +18,8 @@ use crate::bigint::BigInt;
 ///
 /// # Example
 /// ```
-/// use crate::bigint::BigInt;
-/// use crate::field::FieldConfig;
+/// use l3::bigint::BigInt;
+/// use l3::field::FieldConfig;
 ///
 /// #[derive(Clone, Debug)]
 /// struct F97Config;

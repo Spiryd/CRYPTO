@@ -125,7 +125,7 @@ impl<const N: usize, const K: usize> Poly<N, K> {
                         let sub_val = (lead_coeff * irr_coeff).modulo(modulus);
 
                         // temp[target_idx] = temp[target_idx] - sub_val (mod p)
-                        if temp[target_idx].cmp(&sub_val) != std::cmp::Ordering::Less {
+                        if temp[target_idx].compare(&sub_val) != std::cmp::Ordering::Less {
                             temp[target_idx] = temp[target_idx].sub_with_borrow(&sub_val).0;
                         } else {
                             // Need to add p first
@@ -173,8 +173,8 @@ impl<const N: usize, const K: usize> Eq for Poly<N, K> {}
 ///
 /// # Example
 /// ```
-/// use crate::bigint::BigInt;
-/// use crate::field::{FieldConfig, ExtensionField};
+/// use l3::bigint::BigInt;
+/// use l3::field::{FieldConfig, ExtensionField};
 ///
 /// // Define F_5^2 with irreducible polynomial x^2 + x + 2
 /// #[derive(Clone, Debug)]

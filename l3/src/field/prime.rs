@@ -24,8 +24,8 @@ use std::ops::{Add, Div, Mul, Neg, Sub};
 ///
 /// # Example
 /// ```
-/// use crate::bigint::BigInt;
-/// use crate::field::{FieldConfig, PrimeField};
+/// use l3::bigint::BigInt;
+/// use l3::field::{FieldConfig, PrimeField};
 ///
 /// // Define configuration for F_97
 /// #[derive(Clone, Debug)]
@@ -205,7 +205,7 @@ impl<C: FieldConfig<N>, const N: usize> FieldElement for PrimeField<C, N> {
             t = new_t;
 
             // Handle subtraction with potential underflow
-            new_t = if q_times_new_t.cmp(&temp_t) != std::cmp::Ordering::Greater {
+            new_t = if q_times_new_t.compare(&temp_t) != std::cmp::Ordering::Greater {
                 temp_t.sub_with_borrow(&q_times_new_t).0
             } else {
                 let diff = q_times_new_t.sub_with_borrow(&temp_t).0;

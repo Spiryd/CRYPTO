@@ -37,8 +37,8 @@ use std::ops::{Add, Div, Mul, Neg, Sub};
 ///
 /// # Example
 /// ```
-/// use crate::bigint::BigInt;
-/// use crate::field::{FieldConfig, BinaryField};
+/// use l3::bigint::BigInt;
+/// use l3::field::{FieldConfig, BinaryField};
 ///
 /// // Define F_2^8 with AES irreducible polynomial x^8 + x^4 + x^3 + x + 1
 /// #[derive(Clone, Debug)]

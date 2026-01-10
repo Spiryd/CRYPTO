@@ -28,8 +28,9 @@ use std::ops::{Add, Div, Mul, Neg, Sub};
 /// - Multiplicative inverse: `a * a.inverse() = one()` (for non-zero a)
 ///
 /// # Examples
-/// ```
+/// ```ignore
 /// // Any field element type can be used generically
+/// use l3::field_trait::FieldElement;
 /// fn field_operation<F: FieldElement>(a: F, b: F) -> F {
 ///     let sum = a.clone() + b.clone();
 ///     let product = a * b;
@@ -75,7 +76,7 @@ pub trait FieldElement:
     /// Panics if called on the zero element (zero has no multiplicative inverse)
     ///
     /// # Examples
-    /// ```
+    /// ```ignore
     /// let a = SomeField::from(5);
     /// let a_inv = a.inverse();
     /// assert_eq!(a * a_inv, SomeField::one());
@@ -99,7 +100,7 @@ pub trait FieldElement:
     /// O(log(exp)) field multiplications
     ///
     /// # Examples
-    /// ```
+    /// ```ignore
     /// let a = SomeField::from(2);
     /// let a_cubed = a.pow(&[3]);  // a^3 = a * a * a
     /// ```

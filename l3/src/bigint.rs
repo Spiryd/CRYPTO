@@ -21,6 +21,7 @@ use std::ops::{Add, BitAnd, BitOr, BitXor, Mul, Neg, Shl, Shr, Sub};
 ///
 /// # Examples
 /// ```
+/// use l3::bigint::BigInt;
 /// // Create a 256-bit integer (4 * 64 = 256 bits)
 /// let a = BigInt::<4>::from_u64(42);
 /// let b = BigInt::<4>::from_u64(100);
@@ -40,6 +41,7 @@ impl<const N: usize> BigInt<N> {
     ///
     /// # Examples
     /// ```
+    /// use l3::bigint::BigInt;
     /// let zero = BigInt::<4>::zero();
     /// ```
     #[inline]
@@ -51,6 +53,7 @@ impl<const N: usize> BigInt<N> {
     ///
     /// # Examples
     /// ```
+    /// use l3::bigint::BigInt;
     /// let one = BigInt::<4>::one();
     /// ```
     #[inline]
@@ -64,6 +67,7 @@ impl<const N: usize> BigInt<N> {
     ///
     /// # Examples
     /// ```
+    /// use l3::bigint::BigInt;
     /// let num = BigInt::<4>::from_u64(12345);
     /// ```
     #[inline]
@@ -129,7 +133,7 @@ impl<const N: usize> BigInt<N> {
     /// Compares this BigInt with another
     ///
     /// Returns Ordering::Less, Ordering::Equal, or Ordering::Greater
-    pub fn cmp(&self, other: &Self) -> Ordering {
+    pub fn compare(&self, other: &Self) -> Ordering {
         // Compare from most significant to least significant
         for i in (0..N).rev() {
             match self.limbs[i].cmp(&other.limbs[i]) {
@@ -288,7 +292,7 @@ impl<const N: usize> BigInt<N> {
     pub fn div_rem(&self, divisor: &Self) -> (Self, Self) {
         assert!(!divisor.is_zero(), "Division by zero");
 
-        if self.cmp(divisor) == Ordering::Less {
+        if self.compare(divisor) == Ordering::Less {
             return (Self::zero(), *self);
         }
 
@@ -313,7 +317,7 @@ impl<const N: usize> BigInt<N> {
             }
 
             // If remainder >= divisor, subtract divisor and set quotient bit
-            if remainder.cmp(divisor) != Ordering::Less {
+            if remainder.compare(divisor) != Ordering::Less {
                 remainder = remainder.sub_with_borrow(divisor).0;
                 let q_limb_idx = i / 64;
                 let q_bit_idx = i % 64;
@@ -570,9 +574,9 @@ mod tests {
         let a = BigInt256::from_u64(100);
         let b = BigInt256::from_u64(200);
 
-        assert_eq!(a.cmp(&b), Ordering::Less);
-        assert_eq!(b.cmp(&a), Ordering::Greater);
-        assert_eq!(a.cmp(&a), Ordering::Equal);
+        assert_eq!(a.compare(&b), Ordering::Less);
+        assert_eq!(b.compare(&a), Ordering::Greater);
+        assert_eq!(a.compare(&a), Ordering::Equal);
     }
 
     #[test]
