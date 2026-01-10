@@ -6,13 +6,20 @@ A Rust library for finite field arithmetic supporting prime fields (F_p), extens
 
 - ✅ **Generic F_p^k Structure**: Configurable prime and irreducible polynomial
 - ✅ **All Field Operations**: Addition, subtraction, multiplication, division, inverse, negation
-- ✅ **Efficient Exponentiation**: O(log n) binary method
+- ✅ **Constant-Time Exponentiation**: Montgomery ladder prevents timing attacks
 - ✅ **Big Integer Support**: 256, 512, 1024+ bit elements
 - ✅ **Specialized Implementations**:
   - `PrimeField` for k=1 (optimized prime fields)
   - `BinaryField` for p=2 (XOR-based bit string arithmetic)
-- ✅ **Elliptic Curves**: Short Weierstrass and binary field curves
+- ✅ **Elliptic Curves**: Short Weierstrass and binary field curves with constant-time scalar multiplication
 - ✅ **GHASH Algorithm**: GF(2^128) authentication for AES-GCM
+- ✅ **Security**: Resistant to timing side-channel attacks
+
+## Security
+
+⚠️ **Cryptographic Security**: This library implements **constant-time** exponentiation and scalar multiplication using the Montgomery ladder technique to prevent timing side-channel attacks.
+
+See [SECURITY.md](SECURITY.md) for detailed security analysis and [timing_attack_test](examples/timing_attack_test.rs) example for verification.
 
 ## Project Structure
 

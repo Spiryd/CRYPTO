@@ -62,12 +62,12 @@ fn main() {
     println!(
         "   AAD length: {} bytes ({} blocks)",
         aad.len(),
-        (aad.len() + 15) / 16
+        aad.len().div_ceil(16)
     );
     println!(
         "   Ciphertext length: {} bytes ({} blocks)",
         ct.len(),
-        (ct.len() + 15) / 16
+        ct.len().div_ceil(16)
     );
     println!("   Tag: {:02x?}\n", gf128_to_bytes(&tag5));
 
