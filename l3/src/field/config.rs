@@ -57,4 +57,21 @@ pub trait FieldConfig<const N: usize>: 'static + Sized + Clone {
     /// # Returns
     /// A static slice of BigInt coefficients
     fn irreducible() -> &'static [BigInt<N>];
+
+    /// Returns the irreducible polynomial as a compact bitstring (for binary fields only)
+    ///
+    /// For F_2^m (binary fields), the irreducible polynomial can be represented
+    /// efficiently as a bitstring where bit i is 1 if x^i has coefficient 1.
+    ///
+    /// For example, x^128 + x^7 + x^2 + x + 1 = 0x100000000000000000000087
+    ///
+    /// Default implementation converts from irreducible() array (inefficient).
+    /// Binary field configs should override this for better performance.
+    ///
+    /// # Returns
+    /// A static slice of bytes representing the polynomial (little-endian)
+    fn irreducible_bitstring() -> &'static [u8] {
+        // Default: return empty slice, indicating to use irreducible() method
+        &[]
+    }
 }

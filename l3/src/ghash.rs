@@ -39,155 +39,51 @@ use crate::field_trait::FieldElement;
 pub struct GF128Config;
 
 // Base field is F_2
-static F2_MOD: BigInt<3> = BigInt::from_u64(2);
+static F2_MOD: BigInt<4> = BigInt::from_u64(2);
 
-// Irreducible polynomial: x^128 + x^7 + x^2 + x + 1
-// Coefficients for x^0 through x^128
-static GF128_IRRED: [BigInt<3>; 129] = [
-    BigInt::from_u64(1), // x^0
-    BigInt::from_u64(1), // x^1
-    BigInt::from_u64(1), // x^2
-    BigInt::from_u64(0), // x^3
-    BigInt::from_u64(0), // x^4
-    BigInt::from_u64(0), // x^5
-    BigInt::from_u64(0), // x^6
-    BigInt::from_u64(1), // x^7
-    BigInt::from_u64(0), // x^8
-    BigInt::from_u64(0), // x^9
-    BigInt::from_u64(0), // x^10
-    BigInt::from_u64(0), // x^11
-    BigInt::from_u64(0), // x^12
-    BigInt::from_u64(0), // x^13
-    BigInt::from_u64(0), // x^14
-    BigInt::from_u64(0), // x^15
-    BigInt::from_u64(0), // x^16
-    BigInt::from_u64(0), // x^17
-    BigInt::from_u64(0), // x^18
-    BigInt::from_u64(0), // x^19
-    BigInt::from_u64(0), // x^20
-    BigInt::from_u64(0), // x^21
-    BigInt::from_u64(0), // x^22
-    BigInt::from_u64(0), // x^23
-    BigInt::from_u64(0), // x^24
-    BigInt::from_u64(0), // x^25
-    BigInt::from_u64(0), // x^26
-    BigInt::from_u64(0), // x^27
-    BigInt::from_u64(0), // x^28
-    BigInt::from_u64(0), // x^29
-    BigInt::from_u64(0), // x^30
-    BigInt::from_u64(0), // x^31
-    BigInt::from_u64(0), // x^32
-    BigInt::from_u64(0), // x^33
-    BigInt::from_u64(0), // x^34
-    BigInt::from_u64(0), // x^35
-    BigInt::from_u64(0), // x^36
-    BigInt::from_u64(0), // x^37
-    BigInt::from_u64(0), // x^38
-    BigInt::from_u64(0), // x^39
-    BigInt::from_u64(0), // x^40
-    BigInt::from_u64(0), // x^41
-    BigInt::from_u64(0), // x^42
-    BigInt::from_u64(0), // x^43
-    BigInt::from_u64(0), // x^44
-    BigInt::from_u64(0), // x^45
-    BigInt::from_u64(0), // x^46
-    BigInt::from_u64(0), // x^47
-    BigInt::from_u64(0), // x^48
-    BigInt::from_u64(0), // x^49
-    BigInt::from_u64(0), // x^50
-    BigInt::from_u64(0), // x^51
-    BigInt::from_u64(0), // x^52
-    BigInt::from_u64(0), // x^53
-    BigInt::from_u64(0), // x^54
-    BigInt::from_u64(0), // x^55
-    BigInt::from_u64(0), // x^56
-    BigInt::from_u64(0), // x^57
-    BigInt::from_u64(0), // x^58
-    BigInt::from_u64(0), // x^59
-    BigInt::from_u64(0), // x^60
-    BigInt::from_u64(0), // x^61
-    BigInt::from_u64(0), // x^62
-    BigInt::from_u64(0), // x^63
-    BigInt::from_u64(0), // x^64
-    BigInt::from_u64(0), // x^65
-    BigInt::from_u64(0), // x^66
-    BigInt::from_u64(0), // x^67
-    BigInt::from_u64(0), // x^68
-    BigInt::from_u64(0), // x^69
-    BigInt::from_u64(0), // x^70
-    BigInt::from_u64(0), // x^71
-    BigInt::from_u64(0), // x^72
-    BigInt::from_u64(0), // x^73
-    BigInt::from_u64(0), // x^74
-    BigInt::from_u64(0), // x^75
-    BigInt::from_u64(0), // x^76
-    BigInt::from_u64(0), // x^77
-    BigInt::from_u64(0), // x^78
-    BigInt::from_u64(0), // x^79
-    BigInt::from_u64(0), // x^80
-    BigInt::from_u64(0), // x^81
-    BigInt::from_u64(0), // x^82
-    BigInt::from_u64(0), // x^83
-    BigInt::from_u64(0), // x^84
-    BigInt::from_u64(0), // x^85
-    BigInt::from_u64(0), // x^86
-    BigInt::from_u64(0), // x^87
-    BigInt::from_u64(0), // x^88
-    BigInt::from_u64(0), // x^89
-    BigInt::from_u64(0), // x^90
-    BigInt::from_u64(0), // x^91
-    BigInt::from_u64(0), // x^92
-    BigInt::from_u64(0), // x^93
-    BigInt::from_u64(0), // x^94
-    BigInt::from_u64(0), // x^95
-    BigInt::from_u64(0), // x^96
-    BigInt::from_u64(0), // x^97
-    BigInt::from_u64(0), // x^98
-    BigInt::from_u64(0), // x^99
-    BigInt::from_u64(0), // x^100
-    BigInt::from_u64(0), // x^101
-    BigInt::from_u64(0), // x^102
-    BigInt::from_u64(0), // x^103
-    BigInt::from_u64(0), // x^104
-    BigInt::from_u64(0), // x^105
-    BigInt::from_u64(0), // x^106
-    BigInt::from_u64(0), // x^107
-    BigInt::from_u64(0), // x^108
-    BigInt::from_u64(0), // x^109
-    BigInt::from_u64(0), // x^110
-    BigInt::from_u64(0), // x^111
-    BigInt::from_u64(0), // x^112
-    BigInt::from_u64(0), // x^113
-    BigInt::from_u64(0), // x^114
-    BigInt::from_u64(0), // x^115
-    BigInt::from_u64(0), // x^116
-    BigInt::from_u64(0), // x^117
-    BigInt::from_u64(0), // x^118
-    BigInt::from_u64(0), // x^119
-    BigInt::from_u64(0), // x^120
-    BigInt::from_u64(0), // x^121
-    BigInt::from_u64(0), // x^122
-    BigInt::from_u64(0), // x^123
-    BigInt::from_u64(0), // x^124
-    BigInt::from_u64(0), // x^125
-    BigInt::from_u64(0), // x^126
-    BigInt::from_u64(0), // x^127
-    BigInt::from_u64(1), // x^128
+// Irreducible polynomial as compact bitstring: x^128 + x^7 + x^2 + x + 1
+// Bit representation: bit 0=1, bit 1=1, bit 2=1, bit 7=1, bit 128=1
+// = 0x100000000000000000000087 (17 bytes in little-endian)
+//
+// Memory optimization: 17 bytes vs 3096 bytes for the legacy array format!
+// (129 coefficients × 24 bytes per BigInt<4> = 3096 bytes)
+static GF128_IRRED_BITS: [u8; 17] = [
+    0x87, // bits 0-7:   10000111 = x^7 + x^2 + x + 1
+    0x00, // bits 8-15:  00000000
+    0x00, // bits 16-23: 00000000
+    0x00, // bits 24-31: 00000000
+    0x00, // bits 32-39: 00000000
+    0x00, // bits 40-47: 00000000
+    0x00, // bits 48-55: 00000000
+    0x00, // bits 56-63: 00000000
+    0x00, // bits 64-71: 00000000
+    0x00, // bits 72-79: 00000000
+    0x00, // bits 80-87: 00000000
+    0x00, // bits 88-95: 00000000
+    0x00, // bits 96-103: 00000000
+    0x00, // bits 104-111: 00000000
+    0x00, // bits 112-119: 00000000
+    0x00, // bits 120-127: 00000000
+    0x01, // bits 128-135: 00000001 = x^128
 ];
 
-impl FieldConfig<3> for GF128Config {
-    fn modulus() -> &'static BigInt<3> {
+impl FieldConfig<4> for GF128Config {
+    fn modulus() -> &'static BigInt<4> {
         &F2_MOD
     }
 
-    fn irreducible() -> &'static [BigInt<3>] {
-        &GF128_IRRED
+    fn irreducible() -> &'static [BigInt<4>] {
+        &[] // Binary fields use irreducible_bitstring() instead
+    }
+
+    fn irreducible_bitstring() -> &'static [u8] {
+        &GF128_IRRED_BITS
     }
 }
 
 /// GF(2^128) element type for GHASH
-/// Uses 3 limbs (192 bits) to hold 128-bit values with room for intermediate computations
-pub type GF128 = BinaryField<GF128Config, 3, 128>;
+/// Uses 4 limbs (256 bits) to hold 128-bit values with room for intermediate computations
+pub type GF128 = BinaryField<GF128Config, 4, 128>;
 
 /// GHASH authentication function
 ///
@@ -223,55 +119,38 @@ pub type GF128 = BinaryField<GF128Config, 3, 128>;
 /// let tag = ghash(h, aad, ciphertext);
 /// ```
 pub fn ghash(h: GF128, a: &[u8], c: &[u8]) -> GF128 {
-    // Compute bit lengths
-    let a_bits = a.len() * 8;
-    let c_bits = c.len() * 8;
+    // lengths in bits, modulo 2^64 behavior
+    let a_bits = (a.len() as u64).wrapping_mul(8);
+    let c_bits = (c.len() as u64).wrapping_mul(8);
 
-    // Build S = padWithZeros(A) || padWithZeros(C) || len(A) || len(C)
-    let mut s_blocks = Vec::new();
+    let mut x = 0u128;
+    let h_u = gf128_to_u128(&h);
 
-    // Add padded A blocks
-    let mut a_padded = a.to_vec();
-    let a_padding_needed = if a_bits.is_multiple_of(128) {
-        0
-    } else {
-        16 - (a.len() % 16)
-    };
-    a_padded.resize(a.len() + a_padding_needed, 0);
-
-    for chunk in a_padded.chunks(16) {
-        s_blocks.push(bytes_to_gf128(chunk));
+    // Process A in 16-byte blocks with zero padding
+    for chunk in a.chunks(16) {
+        let mut block = [0u8; 16];
+        block[..chunk.len()].copy_from_slice(chunk);
+        let s_i = u128::from_be_bytes(block);
+        x = gf128_mul_gcm(x ^ s_i, h_u);
     }
 
-    // Add padded C blocks
-    let mut c_padded = c.to_vec();
-    let c_padding_needed = if c_bits.is_multiple_of(128) {
-        0
-    } else {
-        16 - (c.len() % 16)
-    };
-    c_padded.resize(c.len() + c_padding_needed, 0);
-
-    for chunk in c_padded.chunks(16) {
-        s_blocks.push(bytes_to_gf128(chunk));
+    // Process C in 16-byte blocks with zero padding
+    for chunk in c.chunks(16) {
+        let mut block = [0u8; 16];
+        block[..chunk.len()].copy_from_slice(chunk);
+        let s_i = u128::from_be_bytes(block);
+        x = gf128_mul_gcm(x ^ s_i, h_u);
     }
 
-    // Add len(A) || len(C) as final block
+    // Length block: [len(A)]_64 || [len(C)]_64, both big-endian, lengths in bits
     let mut len_block = [0u8; 16];
-    // len(A) in bits as 64-bit big-endian
-    len_block[0..8].copy_from_slice(&(a_bits as u64).to_be_bytes());
-    // len(C) in bits as 64-bit big-endian
-    len_block[8..16].copy_from_slice(&(c_bits as u64).to_be_bytes());
-    s_blocks.push(bytes_to_gf128(&len_block));
+    len_block[0..8].copy_from_slice(&a_bits.to_be_bytes());
+    len_block[8..16].copy_from_slice(&c_bits.to_be_bytes());
+    let l = u128::from_be_bytes(len_block);
 
-    // Compute GHASH: X₀ = 0, Xᵢ = (Xᵢ₋₁ + Sᵢ) · H
-    let mut x = GF128::zero();
+    x = gf128_mul_gcm(x ^ l, h_u);
 
-    for s_i in s_blocks {
-        x = (x + s_i) * h.clone();
-    }
-
-    x
+    u128_to_gf128(x)
 }
 
 /// Converts a 16-byte slice to a GF(2^128) element
@@ -294,7 +173,7 @@ pub fn bytes_to_gf128(bytes: &[u8]) -> GF128 {
     assert_eq!(bytes.len(), 16, "Input must be exactly 16 bytes");
 
     // Convert bytes to BigInt limbs (little-endian limbs, big-endian bytes within each limb)
-    let mut limbs = [0u64; 3];
+    let mut limbs = [0u64; 4];
 
     // Process bytes 0-7 into limb 1 (most significant)
     limbs[1] = u64::from_be_bytes([
@@ -331,6 +210,54 @@ pub fn gf128_to_bytes(elem: &GF128) -> [u8; 16] {
     bytes[8..16].copy_from_slice(&limbs[0].to_be_bytes());
 
     bytes
+}
+
+/// Converts a GF(2^128) element to u128
+fn gf128_to_u128(x: &GF128) -> u128 {
+    u128::from_be_bytes(gf128_to_bytes(x))
+}
+
+/// Converts a u128 to GF(2^128) element
+fn u128_to_gf128(x: u128) -> GF128 {
+    bytes_to_gf128(&x.to_be_bytes())
+}
+
+/// GF(2^128) multiplication using NIST Algorithm 1
+///
+/// Implements the NIST specification for GCM multiplication.
+/// This is the bit-by-bit algorithm defined in NIST SP 800-38D.
+///
+/// # Arguments
+///
+/// * `x` - First operand (128-bit integer)
+/// * `y` - Second operand (128-bit integer)
+///
+/// # Returns
+///
+/// Product in GF(2^128) as a 128-bit integer
+fn gf128_mul_gcm(x: u128, y: u128) -> u128 {
+    // R = 11100001 || 0^120
+    const R: u128 = 0xE1000000000000000000000000000000u128;
+
+    let mut z: u128 = 0;
+    let mut v: u128 = y;
+
+    // X_0 is the MSB, X_127 is the LSB
+    for i in 0..128 {
+        let xi = (x >> (127 - i)) & 1;
+        if xi == 1 {
+            z ^= v;
+        }
+
+        // Multiply V by x in GF(2^128) (per spec): right shift, conditional xor with R
+        let lsb = v & 1;
+        v >>= 1;
+        if lsb == 1 {
+            v ^= R;
+        }
+    }
+
+    z
 }
 
 #[cfg(test)]
@@ -442,5 +369,77 @@ mod tests {
         assert_ne!(gf128_to_bytes(&tag1), gf128_to_bytes(&tag2));
         assert_ne!(gf128_to_bytes(&tag1), gf128_to_bytes(&tag3));
         assert_ne!(gf128_to_bytes(&tag2), gf128_to_bytes(&tag3));
+    }
+}
+
+#[cfg(test)]
+mod macsec_vectors {
+    use super::*;
+
+    fn hex_to_bytes(s: &str) -> Vec<u8> {
+        let s: String = s.chars().filter(|c| !c.is_whitespace()).collect();
+        assert!(s.len().is_multiple_of(2), "hex string must have even length");
+        (0..s.len())
+            .step_by(2)
+            .map(|i| u8::from_str_radix(&s[i..i + 2], 16).unwrap())
+            .collect()
+    }
+
+    fn gf128_from_hex_16(s: &str) -> GF128 {
+        let b = hex_to_bytes(s);
+        assert_eq!(b.len(), 16);
+        bytes_to_gf128(&b)
+    }
+
+    #[test]
+    fn ghash_macsec_2_1_1_auth_only_a_560_c_0() {
+        // From MACsec vectors section 2.1.1 (GCM-AES-128 authentication-only).
+        // H: 73A23D80121DE2D5A850253FCF43120E
+        // A: 560 bits (70 bytes), C: empty
+        // GHASH(H,A,C): 1BDA7DB505D8A165264986A703A6920D
+
+        let h = gf128_from_hex_16("73A23D80121DE2D5A850253FCF43120E");
+
+        let a = hex_to_bytes(
+            "D609B1F056637A0D46DF998D88E5222AB2C2846512153524C0895E8108000F101112131415161718191A1B1C1D1E1F202122232425262728292A2B2C2D2E2F30313233340001",
+        );
+
+        let c: &[u8] = &[];
+
+        let expected = gf128_from_hex_16("1BDA7DB505D8A165264986A703A6920D");
+
+        let got = ghash(h, &a, c);
+        assert_eq!(gf128_to_bytes(&got), gf128_to_bytes(&expected));
+    }
+
+    #[test]
+    fn ghash_macsec_2_2_1_encrypt_a_224_c_384() {
+        // From MACsec vectors section 2.2.1 (GCM-AES-128 authenticated encryption).
+        // H: 73A23D80121DE2D5A850253FCF43120E
+        // A: 224 bits (28 bytes)
+        // C: 384 bits (48 bytes)
+        // GHASH(H,A,C): A4C350FB66B8C960E83363381BA90F50
+
+        let h = gf128_from_hex_16("73A23D80121DE2D5A850253FCF43120E");
+
+        let a = hex_to_bytes(
+            "
+            D609B1F056637A0D46DF998D88E52E00
+            B2C2846512153524C0895E81
+            ",
+        );
+
+        let c = hex_to_bytes(
+            "
+            701AFA1CC039C0D765128A665DAB6924
+            3899BF7318CCDC81C9931DA17FBE8EDD
+            7D17CB8B4C26FC81E3284F2B7FBA713D
+            ",
+        );
+
+        let expected = gf128_from_hex_16("A4C350FB66B8C960E83363381BA90F50");
+
+        let got = ghash(h, &a, &c);
+        assert_eq!(gf128_to_bytes(&got), gf128_to_bytes(&expected));
     }
 }

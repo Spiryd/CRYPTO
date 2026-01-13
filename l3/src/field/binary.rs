@@ -164,27 +164,59 @@ impl<C: FieldConfig<N>, const N: usize, const K: usize> BinaryField<C, N, K> {
     ///
     /// Reduces modulo the irreducible polynomial first, then masks to K bits.
     fn reduce(&mut self) {
-        // First reduce modulo irreducible polynomial (BEFORE masking!)
-        let irreducible = C::irreducible();
-        if irreducible.len() == K + 1 {
-            // Reduce modulo the irreducible polynomial
-            // For each bit position >= K, if it's set, XOR with the irreducible polynomial
+        // Use compact bitstring representation if available (much more efficient for binary fields)
+        let irred_bits = C::irreducible_bitstring();
+        
+        if !irred_bits.is_empty() {
+            // Efficient bitstring-based reduction
             while self.degree() >= K {
                 let deg = self.degree();
-                // We have a bit at position deg >= K
-                // XOR with irreducible shifted so its x^K term aligns with x^deg
                 let shift = deg - K;
 
-                // XOR with the shifted irreducible polynomial (excluding the x^K coefficient which is always 1)
-                for (i, coeff) in irreducible.iter().enumerate().take(K) {
-                    if !coeff.is_zero() {
-                        let bit_pos = i + shift;
-                        let current = self.get_bit(bit_pos);
-                        self.set_bit(bit_pos, !current); // XOR: flip the bit
+                // XOR with the shifted irreducible polynomial bits
+                for (byte_idx, &byte) in irred_bits.iter().enumerate() {
+                    if byte == 0 {
+                        continue;
+                    }
+                    
+                    for bit_idx in 0..8 {
+                        if (byte & (1u8 << bit_idx)) != 0 {
+                            let bit_pos = byte_idx * 8 + bit_idx;
+                            if bit_pos < K {
+                                let target = bit_pos + shift;
+                                let current = self.get_bit(target);
+                                self.set_bit(target, !current); // XOR: flip the bit
+                            } else if bit_pos == K {
+                                // The x^K coefficient cancels with the bit at deg
+                                self.set_bit(deg, false);
+                            }
+                        }
                     }
                 }
-                // The x^K coefficient (which is 1) cancels with the bit at deg
-                self.set_bit(deg, false);
+            }
+        } else {
+            // Fallback to legacy array-based reduction
+            let irreducible = C::irreducible();
+            if irreducible.len() == K + 1 {
+                // Reduce modulo the irreducible polynomial
+                // For each bit position >= K, if it's set, XOR with the irreducible polynomial
+                while self.degree() >= K {
+                    let deg = self.degree();
+                    // We have a bit at position deg >= K
+                    // XOR with irreducible shifted so its x^K term aligns with x^deg
+                    let shift = deg - K;
+
+                    // XOR with the shifted irreducible polynomial (excluding the x^K coefficient which is always 1)
+                    for (i, coeff) in irreducible.iter().enumerate().take(K) {
+                        if !coeff.is_zero() {
+                            let bit_pos = i + shift;
+                            let current = self.get_bit(bit_pos);
+                            self.set_bit(bit_pos, !current); // XOR: flip the bit
+                        }
+                    }
+                    // The x^K coefficient (which is 1) cancels with the bit at deg
+                    self.set_bit(deg, false);
+                }
             }
         }
 
@@ -397,6 +429,11 @@ mod tests {
     struct F2_4;
 
     static F2_MOD: BigInt256 = BigInt::from_u64(2);
+    
+    // Compact bitstring: x^4 + x + 1 = 0b10011 = 0x13
+    static F2_4_IRRED_BITS: [u8; 1] = [0x13];
+    
+    // Legacy array format (kept for compatibility)
     static F2_4_IRRED: [BigInt256; 5] = [
         BigInt::from_u64(1), // x^0
         BigInt::from_u64(1), // x^1
@@ -411,6 +448,9 @@ mod tests {
         }
         fn irreducible() -> &'static [BigInt256] {
             &F2_4_IRRED
+        }
+        fn irreducible_bitstring() -> &'static [u8] {
+            &F2_4_IRRED_BITS
         }
     }
 
