@@ -38,7 +38,7 @@ impl FieldConfig<4> for F97 {
 type Fp97 = PrimeField<F97, 4>;
 
 // ============================================================================
-// Field Configuration: F_2^8 (binary field with AES polynomial)
+// Field Configuration: F_2^8
 // ============================================================================
 
 #[derive(Clone, Debug)]

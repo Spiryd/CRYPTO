@@ -247,7 +247,8 @@ impl<const N: usize> BigInt<N> {
 
     /// Left shift by a number of bits
     ///
-    /// Returns (result, overflow_bits) where overflow_bits are the bits shifted out
+    /// Returns (result, overflow_bits). overflow_bits is only meaningful for shifts < 64;
+    /// it contains the bits shifted out of the most significant limb.
     pub fn shl(&self, bits: usize) -> (Self, u64) {
         if bits == 0 {
             return (*self, 0);
@@ -261,29 +262,39 @@ impl<const N: usize> BigInt<N> {
         let bit_shift = bits % 64;
 
         let mut result = Self::zero();
-        let mut overflow = 0u64;
 
         if bit_shift == 0 {
-            // Simple limb shift
-            for i in limb_shift..N {
-                result.limbs[i] = self.limbs[i - limb_shift];
-            }
-            if limb_shift > 0 {
-                overflow = self.limbs[N - limb_shift];
-            }
-        } else {
-            // Bit shift within limbs
-            for i in limb_shift..N {
-                let src_idx = i - limb_shift;
-                result.limbs[i] = self.limbs[src_idx] << bit_shift;
-
-                if src_idx + 1 < N {
-                    result.limbs[i] |= self.limbs[src_idx + 1] >> (64 - bit_shift);
+            // Pure limb shift
+            for i in (0..N).rev() {
+                if i >= limb_shift {
+                    result.limbs[i] = self.limbs[i - limb_shift];
                 }
             }
-
-            overflow = self.limbs[N - 1] >> (64 - bit_shift);
+            // Returning overflow for limb shifts isn't very helpful; keep 0.
+            return (result, 0);
         }
+
+        // Bit shift within limbs
+        // We build from high to low to avoid overwriting issues (though we read from self).
+        for i in (0..N).rev() {
+            // Source limb that lands in i after limb_shift
+            if i < limb_shift {
+                continue;
+            }
+            let src = i - limb_shift;
+
+            let mut v = self.limbs[src] << bit_shift;
+
+            // Carry comes from the *less significant* source limb (src-1)
+            if src > 0 {
+                v |= self.limbs[src - 1] >> (64 - bit_shift);
+            }
+
+            result.limbs[i] = v;
+        }
+
+        // Bits shifted out of the top limb (pre-shift)
+        let overflow = self.limbs[N - 1] >> (64 - bit_shift);
 
         (result, overflow)
     }
@@ -638,5 +649,19 @@ mod tests {
         // Last 8 bytes should contain our value in big-endian
         let last_8 = &bytes[bytes.len() - 8..];
         assert_eq!(last_8, &[0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0]);
+    }
+
+    #[test]
+    fn test_shift_left_cross_limb_carry() {
+        // Put a 1 in the top bit of limb 0 (bit 63), shift left by 1.
+        // It should become bit 0 of limb 1.
+        let mut limbs = [0u64; 4];
+        limbs[0] = 1u64 << 63;
+        let a = BigInt::<4>::from_limbs_internal(limbs);
+
+        let shifted = a << 1;
+
+        assert_eq!(shifted.limbs()[0], 0);
+        assert_eq!(shifted.limbs()[1], 1);
     }
 }
