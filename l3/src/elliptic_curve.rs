@@ -26,6 +26,14 @@ pub struct EllipticCurve<F: FieldElement> {
 
 impl<F: FieldElement> EllipticCurve<F> {
     pub fn new(a: F, b: F) -> Self {
+        // Enforce characteristic > 3 requirement
+        let two = F::one() + F::one();
+        let three = two.clone() + F::one();
+        assert!(
+            !two.is_zero() && !three.is_zero(),
+            "Short Weierstrass form requires characteristic > 3"
+        );
+
         let four = F::one() + F::one() + F::one() + F::one();
         let twenty_seven = {
             let three = F::one() + F::one() + F::one();
@@ -85,6 +93,10 @@ impl<F: FieldElement> EllipticCurve<F> {
                     return Point::Infinity;
                 }
                 let lambda = if x1 == x2 && y1 == y2 {
+                    // Handle doubling when y=0: tangent is vertical, so 2P = O
+                    if y1.is_zero() {
+                        return Point::Infinity;
+                    }
                     let three = F::one() + F::one() + F::one();
                     let two = F::one() + F::one();
                     let numerator = three * x1.clone() * x1.clone() + self.a.clone();
@@ -484,6 +496,100 @@ mod tests {
         assert_eq!(result, p);
     }
 
+    #[test]
+    fn ec_group_law_sanity_fp97() {
+        let a = F97::from_u64(2);
+        let b = F97::from_u64(3);
+        let curve = EllipticCurve::new(a, b);
+        let p = curve.point(F97::from_u64(3), F97::from_u64(6));
+
+        // identity
+        assert_eq!(curve.add(&p, &Point::Infinity), p);
+        assert_eq!(curve.add(&Point::Infinity, &p), p);
+
+        // inverse
+        let neg = curve.negate(&p);
+        assert_eq!(curve.add(&p, &neg), Point::Infinity);
+
+        // doubling vs add
+        assert_eq!(curve.double(&p), curve.add(&p, &p));
+
+        // closure
+        let two_p = curve.double(&p);
+        assert!(curve.is_on_curve(&two_p));
+        let three_p = curve.add(&two_p, &p);
+        assert!(curve.is_on_curve(&three_p));
+    }
+
+    #[test]
+    fn ec_scalar_mul_matches_repeated_add_fp97() {
+        let a = F97::from_u64(2);
+        let b = F97::from_u64(3);
+        let curve = EllipticCurve::new(a, b);
+        let p = curve.point(F97::from_u64(3), F97::from_u64(6));
+
+        // [2]P
+        let two = curve.scalar_mul(&p, &[2]);
+        assert_eq!(two, curve.add(&p, &p));
+
+        // [3]P
+        let three = curve.scalar_mul(&p, &[3]);
+        assert_eq!(three, curve.add(&curve.add(&p, &p), &p));
+
+        // multi-byte scalar to pin LE encoding (256 = 0x0100)
+        let s = curve.scalar_mul(&p, &[0x00, 0x01]); // 256 little-endian
+        // check against repeated doubling 8 times: 256P = (((P*2)*2)*2)*... (8 doublings)
+        let mut t = p.clone();
+        for _ in 0..8 {
+            t = curve.double(&t);
+        }
+        assert_eq!(s, t);
+    }
+
+    #[test]
+    fn ecdh_agreement_fp97() {
+        let a = F97::from_u64(2);
+        let b = F97::from_u64(3);
+        let curve = EllipticCurve::new(a, b);
+        let g = curve.point(F97::from_u64(3), F97::from_u64(6));
+
+        let a_sk: u64 = 7;
+        let b_sk: u64 = 11;
+
+        let a_pub = curve.scalar_mul(&g, &a_sk.to_le_bytes());
+        let b_pub = curve.scalar_mul(&g, &b_sk.to_le_bytes());
+
+        let s1 = curve.scalar_mul(&b_pub, &a_sk.to_le_bytes());
+        let s2 = curve.scalar_mul(&a_pub, &b_sk.to_le_bytes());
+
+        assert_eq!(s1, s2);
+        assert_ne!(s1, Point::Infinity);
+        assert!(curve.is_on_curve(&s1));
+    }
+
+    #[test]
+    fn ec_doubling_y_zero_gives_infinity_fp97() {
+        let a = F97::from_u64(2);
+        let b = F97::from_u64(3);
+        let curve = EllipticCurve::new(a, b);
+
+        // Find any point (x,0) on the curve: 0 = x^3 + ax + b
+        // Over F97 we can brute-force x in 0..97.
+        let mut found = None;
+        for x_u in 0..97u64 {
+            let x = F97::from_u64(x_u);
+            let rhs = x.clone() * x.clone() * x.clone() + curve.a.clone() * x.clone() + curve.b.clone();
+            if rhs.is_zero() {
+                found = Some(curve.point(x, F97::zero()));
+                break;
+            }
+        }
+
+        let p = found.expect("No point with y=0 found on this curve over F97");
+        assert_eq!(curve.double(&p), Point::Infinity);
+        assert_eq!(curve.add(&p, &p), Point::Infinity);
+    }
+
     // Binary curve tests
     #[derive(Clone, Debug)]
     struct F2_4;
@@ -593,5 +699,48 @@ mod tests {
 
         // This point is definitely not on the curve
         let _p = curve.point(GF16::from_u64(1), GF16::from_u64(1));
+    }
+
+    #[test]
+    fn binary_group_law_sanity_gf16() {
+        let a = GF16::from_u64(1);
+        let b = GF16::from_u64(1);
+        let curve = BinaryEllipticCurve::new(a, b);
+
+        // pick any on-curve point by brute-force
+        let mut p_opt = None;
+        for x in 0..16u64 {
+            for y in 0..16u64 {
+                let pt = Point::Affine {
+                    x: GF16::from_u64(x),
+                    y: GF16::from_u64(y),
+                };
+                if curve.is_on_curve(&pt) && pt != Point::Infinity {
+                    p_opt = Some(pt);
+                    break;
+                }
+            }
+            if p_opt.is_some() {
+                break;
+            }
+        }
+        let p = p_opt.expect("no affine point found");
+
+        // inverse
+        let neg = curve.negate(&p);
+        assert_eq!(curve.add(&p, &neg), Point::Infinity);
+
+        // closure
+        let two = curve.double(&p);
+        assert!(curve.is_on_curve(&two));
+
+        // scalar mul checks
+        let two_sm = curve.scalar_mul(&p, &[2]);
+        assert_eq!(two_sm, two);
+
+        // [3]P
+        let three_sm = curve.scalar_mul(&p, &[3]);
+        let three_manual = curve.add(&two, &p);
+        assert_eq!(three_sm, three_manual);
     }
 }

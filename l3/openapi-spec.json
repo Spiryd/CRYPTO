@@ -1,0 +1,1767 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FastAPI",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "Get Test",
+        "operationId": "get_test__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/test/param/modp": {
+      "get": {
+        "summary": "Get Test Modp Param",
+        "operationId": "get_test_modp_param_test_param_modp_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParamResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/test/param/f2m": {
+      "get": {
+        "summary": "Get Test F2M Param",
+        "operationId": "get_test_f2m_param_test_param_f2m_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParamResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/test/param/fpk": {
+      "get": {
+        "summary": "Get Test Fpk Param",
+        "operationId": "get_test_fpk_param_test_param_fpk_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParamResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/test/param/ecp": {
+      "get": {
+        "summary": "Get Test Ecp Param",
+        "operationId": "get_test_ecp_param_test_param_ecp_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParamResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/test/param/ec2m": {
+      "get": {
+        "summary": "Get Test Ec2M Param",
+        "operationId": "get_test_ec2m_param_test_param_ec2m_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParamResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/test/param/ecpk": {
+      "get": {
+        "summary": "Get Test Ecpk Param",
+        "operationId": "get_test_ecpk_param_test_param_ecpk_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParamResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/test/dh/modp": {
+      "post": {
+        "summary": "Post Test Modp Dh",
+        "operationId": "post_test_modp_dh_test_dh_modp_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestDHModPRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestDHModPResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/test/dh/f2m": {
+      "post": {
+        "summary": "Post Test F2M Dh",
+        "operationId": "post_test_f2m_dh_test_dh_f2m_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestDHF2mRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestDHF2mResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/test/dh/fpk": {
+      "post": {
+        "summary": "Post Test Fpk Dh",
+        "operationId": "post_test_fpk_dh_test_dh_fpk_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestDHFpkRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestDHFpkResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/test/dh/ecp": {
+      "post": {
+        "summary": "Post Test Ecp Dh",
+        "operationId": "post_test_ecp_dh_test_dh_ecp_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestDHECRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestDHECResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/test/dh/ec2m": {
+      "post": {
+        "summary": "Post Test Ec2M",
+        "operationId": "post_test_ec2m_test_dh_ec2m_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestDHECRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestDHECResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/test/dh/ecpk": {
+      "post": {
+        "summary": "Post Test Ecpk Dh",
+        "operationId": "post_test_ecpk_dh_test_dh_ecpk_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestDHECRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestDHECResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/test/sign/modp": {
+      "post": {
+        "summary": "Post Test Modp Sign",
+        "operationId": "post_test_modp_sign_test_sign_modp_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestSignatureRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestSignatureResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/test/sign/f2m": {
+      "post": {
+        "summary": "Post Test F2M Sign",
+        "operationId": "post_test_f2m_sign_test_sign_f2m_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestSignatureRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestSignatureResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/test/sign/fpk": {
+      "post": {
+        "summary": "Post Test Fpk Sign",
+        "operationId": "post_test_fpk_sign_test_sign_fpk_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestSignatureRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestSignatureResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/test/sign/ecp": {
+      "post": {
+        "summary": "Post Test Ecp Sign",
+        "operationId": "post_test_ecp_sign_test_sign_ecp_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestSignatureRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestSignatureResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/test/sign/ec2m": {
+      "post": {
+        "summary": "Post Test Ec2M Sign",
+        "operationId": "post_test_ec2m_sign_test_sign_ec2m_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestSignatureRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestSignatureResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/test/sign/ecpk": {
+      "post": {
+        "summary": "Post Test Ecpk Sign",
+        "operationId": "post_test_ecpk_sign_test_sign_ecpk_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestSignatureRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestSignatureResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/submit/start/{type}": {
+      "get": {
+        "summary": "Get Submit Combo Start",
+        "operationId": "get_submit_combo_start_submit_start__type__get",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "modp",
+                "f2m",
+                "fpk",
+                "ecp",
+                "ec2m",
+                "ecpk"
+              ],
+              "type": "string",
+              "title": "Type"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestComboStartResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/submit/finish": {
+      "post": {
+        "summary": "Post Submit Combo Finish",
+        "operationId": "post_submit_combo_finish_submit_finish_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestComboFinishRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BaseResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "success"
+          }
+        },
+        "type": "object",
+        "title": "BaseResponse"
+      },
+      "EC2mParams": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Reference name of the parameter set"
+          },
+          "extension": {
+            "type": "integer",
+            "title": "Extension Factor",
+            "description": "Field extension factor `m` or expected bit string length"
+          },
+          "modulus": {
+            "type": "string",
+            "title": "Modulus",
+            "description": "Field-defining polynomial of degree `m`, excluding x^m. Encoded as hexadecimal bit string, big-endian encoding."
+          },
+          "a": {
+            "type": "string",
+            "title": "Paramter A",
+            "description": "Curve parameter `a`. Encoded as hexadecimal bit string, big-endian encoding."
+          },
+          "b": {
+            "type": "string",
+            "title": "Paramter B",
+            "description": "Curve parameter `b`. Encoded as hexadecimal bit string, big-endian encoding."
+          },
+          "generator": {
+            "$ref": "#/components/schemas/EC2mPoint",
+            "title": "Generator",
+            "description": "Group generator `g`."
+          },
+          "order": {
+            "type": "string",
+            "title": "Order",
+            "description": "Group order `q`. Uses hexadecimal (base16), big-endian encoding."
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "extension",
+          "modulus",
+          "a",
+          "b",
+          "generator",
+          "order"
+        ],
+        "title": "EC2mParams"
+      },
+      "EC2mPoint": {
+        "properties": {
+          "x": {
+            "type": "string",
+            "title": "Coefficient X",
+            "description": "Coefficient `x`. Encoded as hexadecimal bit string, big-endian encoding."
+          },
+          "y": {
+            "type": "string",
+            "title": "Coefficient Y",
+            "description": "Coefficient `y`. Encoded as hexadecimal bit string, big-endian encoding."
+          }
+        },
+        "type": "object",
+        "required": [
+          "x",
+          "y"
+        ],
+        "title": "EC2mPoint"
+      },
+      "ECPParams": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Reference name of the parameter set"
+          },
+          "modulus": {
+            "type": "string",
+            "title": "Modulus",
+            "description": "Prime modulus `p`. Uses hexadecimal (base16), big-endian encoding."
+          },
+          "a": {
+            "type": "string",
+            "title": "Paramter A",
+            "description": "Curve parameter `a`. Uses hexadecimal (base16), big-endian encoding."
+          },
+          "b": {
+            "type": "string",
+            "title": "Paramter B",
+            "description": "Curve parameter `b`. Uses hexadecimal (base16), big-endian encoding."
+          },
+          "generator": {
+            "$ref": "#/components/schemas/ECPPoint",
+            "title": "Generator",
+            "description": "Group generator `g`."
+          },
+          "order": {
+            "type": "string",
+            "title": "Order",
+            "description": "Group order `q`. Uses hexadecimal (base16), big-endian encoding."
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "modulus",
+          "a",
+          "b",
+          "generator",
+          "order"
+        ],
+        "title": "ECPParams"
+      },
+      "ECPPoint": {
+        "properties": {
+          "x": {
+            "type": "string",
+            "title": "Coefficient X",
+            "description": "Coefficient `x`. Uses hexadecimal (base16), big-endian encoding."
+          },
+          "y": {
+            "type": "string",
+            "title": "Coefficient Y",
+            "description": "Coefficient `y`. Uses hexadecimal (base16), big-endian encoding."
+          }
+        },
+        "type": "object",
+        "required": [
+          "x",
+          "y"
+        ],
+        "title": "ECPPoint"
+      },
+      "ECPkParams": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Reference name of the parameter set"
+          },
+          "prime_base": {
+            "type": "string",
+            "title": "Prime Base",
+            "description": "Base field prime modulus `p`. Uses hexadecimal (base16), big-endian encoding."
+          },
+          "extension": {
+            "type": "integer",
+            "title": "Extension Factor",
+            "description": "Field extension factor `k`"
+          },
+          "modulus": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Modulus Polynomial",
+            "description": "Field-defining polynomial of degree `k`, excluding x^k. Encoded as an array of coefficients in little endian order (element 0 corresponds to x^0).\nEach coefficient uses hexadecimal (base16), big-endian encoding."
+          },
+          "a": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Paramter A",
+            "description": "Curve parameter `a`. Encoded as an array of coefficients in little endian order (element 0 corresponds to x^0).\nEach coefficient uses hexadecimal (base16), big-endian encoding."
+          },
+          "b": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Paramter B",
+            "description": "Curve parameter `b`. Encoded as an array of coefficients in little endian order (element 0 corresponds to x^0).\nEach coefficient uses hexadecimal (base16), big-endian encoding."
+          },
+          "generator": {
+            "$ref": "#/components/schemas/ECPkPoint",
+            "title": "Generator",
+            "description": "Group generator `g`."
+          },
+          "order": {
+            "type": "string",
+            "title": "Order",
+            "description": "Group order `q`. Uses hexadecimal (base16), big-endian encoding."
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "prime_base",
+          "extension",
+          "modulus",
+          "a",
+          "b",
+          "generator",
+          "order"
+        ],
+        "title": "ECPkParams"
+      },
+      "ECPkPoint": {
+        "properties": {
+          "x": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Coefficient X",
+            "description": "Coefficient `x`. Encoded as an array of coefficients in little endian order (element 0 corresponds to x^0).\nEach coefficient uses hexadecimal (base16), big-endian encoding."
+          },
+          "y": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Coefficient Y",
+            "description": "Coefficient `y`. Encoded as an array of coefficients in little endian order (element 0 corresponds to x^0).\nEach coefficient uses hexadecimal (base16), big-endian encoding."
+          }
+        },
+        "type": "object",
+        "required": [
+          "x",
+          "y"
+        ],
+        "title": "ECPkPoint"
+      },
+      "F2mParams": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Reference name of the parameter set"
+          },
+          "extension": {
+            "type": "integer",
+            "title": "Extension Factor",
+            "description": "Field extension factor `m` or expected bit string length"
+          },
+          "modulus": {
+            "type": "string",
+            "title": "Modulus",
+            "description": "Field-defining polynomial of degree `m`, excluding x^m. Encoded as hexadecimal bit string, big-endian encoding."
+          },
+          "generator": {
+            "type": "string",
+            "title": "Generator",
+            "description": "Subgroup generator `g`. Encoded as hexadecimal bit string, big-endian encoding."
+          },
+          "order": {
+            "type": "string",
+            "title": "Order",
+            "description": "Subgroup order `q`. Uses hexadecimal (base16), big-endian encoding."
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "extension",
+          "modulus",
+          "generator",
+          "order"
+        ],
+        "title": "F2mParams",
+        "description": "The polynomials are encoded as constant-size bitstrings of `m` bits.\nEach bitstring is encoded as a big-endian byte array, i.e. bit 0 of the bit string is the bit 0 of the last byte,\nbit 7 is bit 7 of the last byte, highest bit of the first byte is the last bit, etc."
+      },
+      "FpkParams": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Reference name of the parameter set"
+          },
+          "prime_base": {
+            "type": "string",
+            "title": "Prime Base",
+            "description": "Base field prime modulus `p`. Uses hexadecimal (base16), big-endian encoding."
+          },
+          "extension": {
+            "type": "integer",
+            "title": "Extension Factor",
+            "description": "Field extension factor `k`"
+          },
+          "modulus": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Modulus Polynomial",
+            "description": "Field-defining polynomial of degree `k`, excluding x^k. Encoded as an array of coefficients in little endian order (element 0 corresponds to x^0).\nEach coefficient uses hexadecimal (base16), big-endian encoding."
+          },
+          "generator": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Generator Polynomial",
+            "description": "Subgroup generator as polynomial of degree `k-1`. Encoded as an array of coefficients in little endian order (element 0 corresponds to x^0).\nEach coefficient uses hexadecimal (base16), big-endian encoding."
+          },
+          "order": {
+            "type": "string",
+            "title": "Order",
+            "description": "Subgroup order `q`. Uses hexadecimal (base16), big-endian encoding."
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "prime_base",
+          "extension",
+          "modulus",
+          "generator",
+          "order"
+        ],
+        "title": "FpkParams"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "ModPParams": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Reference name of the parameter set"
+          },
+          "modulus": {
+            "type": "string",
+            "title": "Modulus",
+            "description": "Prime modulus `p`. Uses hexadecimal (base16), big-endian encoding."
+          },
+          "generator": {
+            "type": "string",
+            "title": "Generator",
+            "description": "Subgroup generator `g`. Uses hexadecimal (base16), big-endian encoding."
+          },
+          "order": {
+            "type": "string",
+            "title": "Order",
+            "description": "Subgroup order `q`. Uses hexadecimal (base16), big-endian encoding."
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "modulus",
+          "generator",
+          "order"
+        ],
+        "title": "ModPParams"
+      },
+      "ParamResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "success"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "modp",
+              "f2m",
+              "fpk",
+              "ecp",
+              "ec2m",
+              "ecpk"
+            ],
+            "title": "Type"
+          },
+          "params": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModPParams"
+              },
+              {
+                "$ref": "#/components/schemas/F2mParams"
+              },
+              {
+                "$ref": "#/components/schemas/FpkParams"
+              },
+              {
+                "$ref": "#/components/schemas/ECPParams"
+              },
+              {
+                "$ref": "#/components/schemas/EC2mParams"
+              },
+              {
+                "$ref": "#/components/schemas/ECPkParams"
+              }
+            ],
+            "title": "Params"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "params"
+        ],
+        "title": "ParamResponse"
+      },
+      "SchnorrSignatureModel": {
+        "properties": {
+          "s": {
+            "type": "string",
+            "title": "S Component",
+            "description": "Signature value `s`. Uses hexadecimal (base16), big-endian encoding.",
+            "examples": [
+              "c9a4c18352eca8b3acda1ac7a4b523d1"
+            ]
+          },
+          "e": {
+            "type": "string",
+            "title": "E Component",
+            "description": "Signature value `e`. Uses hexadecimal (base16), big-endian encoding. This encoding should match the hash value.",
+            "examples": [
+              "26c92207c779bca13d7f73b7246fb207"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "s",
+          "e"
+        ],
+        "title": "SchnorrSignatureModel"
+      },
+      "TestComboFinishRequest": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "format": "uuid4",
+            "title": "Session Id"
+          },
+          "client_public_sign": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "$ref": "#/components/schemas/ECPPoint"
+              },
+              {
+                "$ref": "#/components/schemas/EC2mPoint"
+              },
+              {
+                "$ref": "#/components/schemas/ECPkPoint"
+              }
+            ],
+            "title": "Client Public (Signature)",
+            "description": "Client public key used for signing.",
+            "examples": [
+              [
+                "10fe85cc90ec39c9aa37c55d20ee23c6690ee90df2dc76bd3818c9267fc8af2a",
+                "dcb28ed2b50bc852c5b42709aa81231da32e05a9066a903a7938d89002e9cdae",
+                "ebf324491b7736ebfe37c2dddece8d935f9941fa53fd5c46d9438adec0a04797",
+                "1e2e31ab500b2c15ac3e79238903929cd16e02c86b15173401fee627d2aa65d3",
+                "82d3bc98a0577091327c6ab3d304d3566ba1feab865eb866178c604ea49efb6f",
+                "4a7c87b336c726f329e7b419aa8483ec752505d7bf61ce44686c115466aae59f",
+                "a30dcbfb7e26007237730ff64f8ea132c34a04cddf0616b48cbedc4498954239",
+                "48b4148a47c2dd54f1766bc550974e0326814a5428e184adab9e1fe21196316d"
+              ]
+            ]
+          },
+          "client_public_dh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "$ref": "#/components/schemas/ECPPoint"
+              },
+              {
+                "$ref": "#/components/schemas/EC2mPoint"
+              },
+              {
+                "$ref": "#/components/schemas/ECPkPoint"
+              }
+            ],
+            "title": "Client Public (Key Exchange)",
+            "description": "Client public key used for key exchange (DH).",
+            "examples": [
+              [
+                "10fe85cc90ec39c9aa37c55d20ee23c6690ee90df2dc76bd3818c9267fc8af2a",
+                "dcb28ed2b50bc852c5b42709aa81231da32e05a9066a903a7938d89002e9cdae",
+                "ebf324491b7736ebfe37c2dddece8d935f9941fa53fd5c46d9438adec0a04797",
+                "1e2e31ab500b2c15ac3e79238903929cd16e02c86b15173401fee627d2aa65d3",
+                "82d3bc98a0577091327c6ab3d304d3566ba1feab865eb866178c604ea49efb6f",
+                "4a7c87b336c726f329e7b419aa8483ec752505d7bf61ce44686c115466aae59f",
+                "a30dcbfb7e26007237730ff64f8ea132c34a04cddf0616b48cbedc4498954239",
+                "48b4148a47c2dd54f1766bc550974e0326814a5428e184adab9e1fe21196316d"
+              ]
+            ]
+          },
+          "signature": {
+            "$ref": "#/components/schemas/SchnorrSignatureModel",
+            "title": "Signature",
+            "description": "Client-side signature of `client_public_dh`"
+          },
+          "shared_secret": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "$ref": "#/components/schemas/ECPPoint"
+              },
+              {
+                "$ref": "#/components/schemas/EC2mPoint"
+              },
+              {
+                "$ref": "#/components/schemas/ECPkPoint"
+              }
+            ],
+            "title": "Shared secret",
+            "description": "Computed Diffie-Hellman shared secret.",
+            "examples": [
+              [
+                "10fe85cc90ec39c9aa37c55d20ee23c6690ee90df2dc76bd3818c9267fc8af2a",
+                "dcb28ed2b50bc852c5b42709aa81231da32e05a9066a903a7938d89002e9cdae",
+                "ebf324491b7736ebfe37c2dddece8d935f9941fa53fd5c46d9438adec0a04797",
+                "1e2e31ab500b2c15ac3e79238903929cd16e02c86b15173401fee627d2aa65d3",
+                "82d3bc98a0577091327c6ab3d304d3566ba1feab865eb866178c604ea49efb6f",
+                "4a7c87b336c726f329e7b419aa8483ec752505d7bf61ce44686c115466aae59f",
+                "a30dcbfb7e26007237730ff64f8ea132c34a04cddf0616b48cbedc4498954239",
+                "48b4148a47c2dd54f1766bc550974e0326814a5428e184adab9e1fe21196316d"
+              ]
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "client_public_sign",
+          "client_public_dh",
+          "signature",
+          "shared_secret"
+        ],
+        "title": "TestComboFinishRequest"
+      },
+      "TestComboStartResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "success"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "modp",
+              "f2m",
+              "fpk",
+              "ecp",
+              "ec2m",
+              "ecpk"
+            ],
+            "title": "Type",
+            "examples": [
+              "fpk"
+            ]
+          },
+          "session_id": {
+            "type": "string",
+            "format": "uuid4",
+            "title": "Session Id"
+          },
+          "params": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModPParams"
+              },
+              {
+                "$ref": "#/components/schemas/F2mParams"
+              },
+              {
+                "$ref": "#/components/schemas/FpkParams"
+              },
+              {
+                "$ref": "#/components/schemas/ECPParams"
+              },
+              {
+                "$ref": "#/components/schemas/EC2mParams"
+              },
+              {
+                "$ref": "#/components/schemas/ECPkParams"
+              }
+            ],
+            "title": "Params"
+          },
+          "server_public_sign": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "$ref": "#/components/schemas/ECPPoint"
+              },
+              {
+                "$ref": "#/components/schemas/EC2mPoint"
+              },
+              {
+                "$ref": "#/components/schemas/ECPkPoint"
+              }
+            ],
+            "title": "Server Public (Signature)",
+            "description": "Server public key used for signing. Uses encoding appropriate to `type`",
+            "examples": [
+              [
+                "10fe85cc90ec39c9aa37c55d20ee23c6690ee90df2dc76bd3818c9267fc8af2a",
+                "dcb28ed2b50bc852c5b42709aa81231da32e05a9066a903a7938d89002e9cdae",
+                "ebf324491b7736ebfe37c2dddece8d935f9941fa53fd5c46d9438adec0a04797",
+                "1e2e31ab500b2c15ac3e79238903929cd16e02c86b15173401fee627d2aa65d3",
+                "82d3bc98a0577091327c6ab3d304d3566ba1feab865eb866178c604ea49efb6f",
+                "4a7c87b336c726f329e7b419aa8483ec752505d7bf61ce44686c115466aae59f",
+                "a30dcbfb7e26007237730ff64f8ea132c34a04cddf0616b48cbedc4498954239",
+                "48b4148a47c2dd54f1766bc550974e0326814a5428e184adab9e1fe21196316d"
+              ]
+            ]
+          },
+          "server_public_dh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "$ref": "#/components/schemas/ECPPoint"
+              },
+              {
+                "$ref": "#/components/schemas/EC2mPoint"
+              },
+              {
+                "$ref": "#/components/schemas/ECPkPoint"
+              }
+            ],
+            "title": "Server Public (Key Exchange)",
+            "description": "Server public key used for key exchange (DH). Uses encoding appropriate to `type`",
+            "examples": [
+              [
+                "10fe85cc90ec39c9aa37c55d20ee23c6690ee90df2dc76bd3818c9267fc8af2a",
+                "dcb28ed2b50bc852c5b42709aa81231da32e05a9066a903a7938d89002e9cdae",
+                "ebf324491b7736ebfe37c2dddece8d935f9941fa53fd5c46d9438adec0a04797",
+                "1e2e31ab500b2c15ac3e79238903929cd16e02c86b15173401fee627d2aa65d3",
+                "82d3bc98a0577091327c6ab3d304d3566ba1feab865eb866178c604ea49efb6f",
+                "4a7c87b336c726f329e7b419aa8483ec752505d7bf61ce44686c115466aae59f",
+                "a30dcbfb7e26007237730ff64f8ea132c34a04cddf0616b48cbedc4498954239",
+                "48b4148a47c2dd54f1766bc550974e0326814a5428e184adab9e1fe21196316d"
+              ]
+            ]
+          },
+          "signature": {
+            "$ref": "#/components/schemas/SchnorrSignatureModel",
+            "title": "Signature",
+            "description": "Server-side signature of `server_public_dh`"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "session_id",
+          "params",
+          "server_public_sign",
+          "server_public_dh",
+          "signature"
+        ],
+        "title": "TestComboStartResponse"
+      },
+      "TestDHECRequest": {
+        "properties": {
+          "client_public": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ECPPoint"
+              },
+              {
+                "$ref": "#/components/schemas/EC2mPoint"
+              },
+              {
+                "$ref": "#/components/schemas/ECPkPoint"
+              }
+            ],
+            "title": "Client public key",
+            "description": "Client-side ephemeral Diffie-Hellman public key.",
+            "examples": [
+              {
+                "x": "8bd2aeb9cb7e57cb2c4b482ffc81b7afb9de27e1e3bd23c23a4453bd9ace3262",
+                "y": "547ef835c3dac4fd97f8461a14611dc9c27745132ded8e545c1d54c72f046997"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "client_public"
+        ],
+        "title": "TestDHECRequest"
+      },
+      "TestDHECResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "success"
+          },
+          "server_public": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ECPPoint"
+              },
+              {
+                "$ref": "#/components/schemas/EC2mPoint"
+              },
+              {
+                "$ref": "#/components/schemas/ECPkPoint"
+              }
+            ],
+            "title": "Server public key",
+            "description": "Server-side ephemeral Diffie-Hellman public key.",
+            "examples": [
+              {
+                "x": "8bd2aeb9cb7e57cb2c4b482ffc81b7afb9de27e1e3bd23c23a4453bd9ace3262",
+                "y": "547ef835c3dac4fd97f8461a14611dc9c27745132ded8e545c1d54c72f046997"
+              }
+            ]
+          },
+          "shared_secret": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ECPPoint"
+              },
+              {
+                "$ref": "#/components/schemas/EC2mPoint"
+              },
+              {
+                "$ref": "#/components/schemas/ECPkPoint"
+              }
+            ],
+            "title": "Shared secret",
+            "description": "Computed Diffie-Hellman shared secret in point form.",
+            "examples": [
+              {
+                "x": "8bd2aeb9cb7e57cb2c4b482ffc81b7afb9de27e1e3bd23c23a4453bd9ace3262",
+                "y": "547ef835c3dac4fd97f8461a14611dc9c27745132ded8e545c1d54c72f046997"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "server_public",
+          "shared_secret"
+        ],
+        "title": "TestDHECResponse"
+      },
+      "TestDHF2mRequest": {
+        "properties": {
+          "client_public": {
+            "type": "string",
+            "title": "Client public key",
+            "description": "Client-side ephemeral Diffie-Hellman public key. Encoded as hexadecimal bit string, big-endian encoding.",
+            "examples": [
+              "bc401f23522edb3c65c4c3bfeafeb217ca067810ca1ae4b406b25d6f29db4eed76688355a32c978bd5f58ff2d990e6b1eecc67c8582d42fd9563e511b0580fa964b9256c037e71a032acfb0b52b421fdff1209c54a6618602912e2712ed17e2a6d8445f809b7e59c0adbb2b685bc5ba1282f1ae49ae5bfa1cfa729af6d50cec023e90998616fda6091a46ab9632740b0013ec787a23956bd517e1c0f11ee1ed966a8f6a761d3e1a454298b552696711a6dd792d5dfb5bf81eaf3730dabd33d949adde6d1045c41fca159f4025a9b78f9fea781650ad02f4faa5b1fa04d1ddfb502a8706f3f7e142321635266a7a501ee30f2a529e0f2f32499d618c99ced95f"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "client_public"
+        ],
+        "title": "TestDHF2mRequest"
+      },
+      "TestDHF2mResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "success"
+          },
+          "server_public": {
+            "type": "string",
+            "title": "Server public key",
+            "description": "Server-side ephemeral Diffie-Hellman public key. Encoded as hexadecimal bit string, big-endian encoding.",
+            "examples": [
+              "bc401f23522edb3c65c4c3bfeafeb217ca067810ca1ae4b406b25d6f29db4eed76688355a32c978bd5f58ff2d990e6b1eecc67c8582d42fd9563e511b0580fa964b9256c037e71a032acfb0b52b421fdff1209c54a6618602912e2712ed17e2a6d8445f809b7e59c0adbb2b685bc5ba1282f1ae49ae5bfa1cfa729af6d50cec023e90998616fda6091a46ab9632740b0013ec787a23956bd517e1c0f11ee1ed966a8f6a761d3e1a454298b552696711a6dd792d5dfb5bf81eaf3730dabd33d949adde6d1045c41fca159f4025a9b78f9fea781650ad02f4faa5b1fa04d1ddfb502a8706f3f7e142321635266a7a501ee30f2a529e0f2f32499d618c99ced95f"
+            ]
+          },
+          "shared_secret": {
+            "type": "string",
+            "title": "Shared secret",
+            "description": "Computed Diffie-Hellman shared secret in its raw form. Encoded as hexadecimal bit string, big-endian encoding.",
+            "examples": [
+              "bc401f23522edb3c65c4c3bfeafeb217ca067810ca1ae4b406b25d6f29db4eed76688355a32c978bd5f58ff2d990e6b1eecc67c8582d42fd9563e511b0580fa964b9256c037e71a032acfb0b52b421fdff1209c54a6618602912e2712ed17e2a6d8445f809b7e59c0adbb2b685bc5ba1282f1ae49ae5bfa1cfa729af6d50cec023e90998616fda6091a46ab9632740b0013ec787a23956bd517e1c0f11ee1ed966a8f6a761d3e1a454298b552696711a6dd792d5dfb5bf81eaf3730dabd33d949adde6d1045c41fca159f4025a9b78f9fea781650ad02f4faa5b1fa04d1ddfb502a8706f3f7e142321635266a7a501ee30f2a529e0f2f32499d618c99ced95f"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "server_public",
+          "shared_secret"
+        ],
+        "title": "TestDHF2mResponse"
+      },
+      "TestDHFpkRequest": {
+        "properties": {
+          "client_public": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Client public key",
+            "description": "Client-side ephemeral Diffie-Hellman public key. Encoded as an array of coefficients in little endian order (element 0 corresponds to x^0).\nEach coefficient uses hexadecimal (base16), big-endian encoding.",
+            "examples": [
+              [
+                "10fe85cc90ec39c9aa37c55d20ee23c6690ee90df2dc76bd3818c9267fc8af2a",
+                "dcb28ed2b50bc852c5b42709aa81231da32e05a9066a903a7938d89002e9cdae",
+                "ebf324491b7736ebfe37c2dddece8d935f9941fa53fd5c46d9438adec0a04797",
+                "1e2e31ab500b2c15ac3e79238903929cd16e02c86b15173401fee627d2aa65d3",
+                "82d3bc98a0577091327c6ab3d304d3566ba1feab865eb866178c604ea49efb6f",
+                "4a7c87b336c726f329e7b419aa8483ec752505d7bf61ce44686c115466aae59f",
+                "a30dcbfb7e26007237730ff64f8ea132c34a04cddf0616b48cbedc4498954239",
+                "48b4148a47c2dd54f1766bc550974e0326814a5428e184adab9e1fe21196316d"
+              ]
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "client_public"
+        ],
+        "title": "TestDHFpkRequest"
+      },
+      "TestDHFpkResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "success"
+          },
+          "server_public": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Server public key",
+            "description": "Server-side ephemeral Diffie-Hellman public key. Encoded as an array of coefficients in little endian order (element 0 corresponds to x^0).\nEach coefficient uses hexadecimal (base16), big-endian encoding.",
+            "examples": [
+              [
+                "10fe85cc90ec39c9aa37c55d20ee23c6690ee90df2dc76bd3818c9267fc8af2a",
+                "dcb28ed2b50bc852c5b42709aa81231da32e05a9066a903a7938d89002e9cdae",
+                "ebf324491b7736ebfe37c2dddece8d935f9941fa53fd5c46d9438adec0a04797",
+                "1e2e31ab500b2c15ac3e79238903929cd16e02c86b15173401fee627d2aa65d3",
+                "82d3bc98a0577091327c6ab3d304d3566ba1feab865eb866178c604ea49efb6f",
+                "4a7c87b336c726f329e7b419aa8483ec752505d7bf61ce44686c115466aae59f",
+                "a30dcbfb7e26007237730ff64f8ea132c34a04cddf0616b48cbedc4498954239",
+                "48b4148a47c2dd54f1766bc550974e0326814a5428e184adab9e1fe21196316d"
+              ]
+            ]
+          },
+          "shared_secret": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Shared secret",
+            "description": "Computed Diffie-Hellman shared secret in its raw form. Encoded as an array of coefficients in little endian order (element 0 corresponds to x^0).\nEach coefficient uses hexadecimal (base16), big-endian encoding.",
+            "examples": [
+              [
+                "10fe85cc90ec39c9aa37c55d20ee23c6690ee90df2dc76bd3818c9267fc8af2a",
+                "dcb28ed2b50bc852c5b42709aa81231da32e05a9066a903a7938d89002e9cdae",
+                "ebf324491b7736ebfe37c2dddece8d935f9941fa53fd5c46d9438adec0a04797",
+                "1e2e31ab500b2c15ac3e79238903929cd16e02c86b15173401fee627d2aa65d3",
+                "82d3bc98a0577091327c6ab3d304d3566ba1feab865eb866178c604ea49efb6f",
+                "4a7c87b336c726f329e7b419aa8483ec752505d7bf61ce44686c115466aae59f",
+                "a30dcbfb7e26007237730ff64f8ea132c34a04cddf0616b48cbedc4498954239",
+                "48b4148a47c2dd54f1766bc550974e0326814a5428e184adab9e1fe21196316d"
+              ]
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "server_public",
+          "shared_secret"
+        ],
+        "title": "TestDHFpkResponse"
+      },
+      "TestDHModPRequest": {
+        "properties": {
+          "client_public": {
+            "type": "string",
+            "title": "Client public key",
+            "description": "Client-side ephemeral Diffie-Hellman public key. Uses hexadecimal (base16), big-endian encoding.",
+            "examples": [
+              "2749358e03067a751b154eb4584ad97c04a5f49a0b4673e56c2ea07f248ac3799f51ea1b46f36bb653e980e65e8cb1ffd7dafe34e30370af81bcc8d99e3f126d0d5edf2f88fc9fe4175fb45639637925f43fe999f816cb8ecd6556d8774bf407ba2c9986f83e627ff295ee02b93d4bd83e01978ef1e9639879899f29412677e30fcafdf29810c07d7560d03c75f54a678117a3a8669261605a34a9d49a79c04189cf2ab73749b3ce62896a8d34155867a9b0f516957d91f0552263192e91df7044cc00f776580ec0aa2ec6035736561a04b2350b76c9223efac0709b2997185f93e1e78536b70f3be42408aae4ffe578626e7f96b5dee713c06edeeabb8a9447"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "client_public"
+        ],
+        "title": "TestDHModPRequest"
+      },
+      "TestDHModPResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "success"
+          },
+          "server_public": {
+            "type": "string",
+            "title": "Server public key",
+            "description": "Server-side ephemeral Diffie-Hellman public key. Uses hexadecimal (base16), big-endian encoding.",
+            "examples": [
+              "2749358e03067a751b154eb4584ad97c04a5f49a0b4673e56c2ea07f248ac3799f51ea1b46f36bb653e980e65e8cb1ffd7dafe34e30370af81bcc8d99e3f126d0d5edf2f88fc9fe4175fb45639637925f43fe999f816cb8ecd6556d8774bf407ba2c9986f83e627ff295ee02b93d4bd83e01978ef1e9639879899f29412677e30fcafdf29810c07d7560d03c75f54a678117a3a8669261605a34a9d49a79c04189cf2ab73749b3ce62896a8d34155867a9b0f516957d91f0552263192e91df7044cc00f776580ec0aa2ec6035736561a04b2350b76c9223efac0709b2997185f93e1e78536b70f3be42408aae4ffe578626e7f96b5dee713c06edeeabb8a9447"
+            ]
+          },
+          "shared_secret": {
+            "type": "string",
+            "title": "Shared secret",
+            "description": "Computed Diffie-Hellman shared secret in its raw form. Uses hexadecimal (base16), big-endian encoding.",
+            "examples": [
+              "2749358e03067a751b154eb4584ad97c04a5f49a0b4673e56c2ea07f248ac3799f51ea1b46f36bb653e980e65e8cb1ffd7dafe34e30370af81bcc8d99e3f126d0d5edf2f88fc9fe4175fb45639637925f43fe999f816cb8ecd6556d8774bf407ba2c9986f83e627ff295ee02b93d4bd83e01978ef1e9639879899f29412677e30fcafdf29810c07d7560d03c75f54a678117a3a8669261605a34a9d49a79c04189cf2ab73749b3ce62896a8d34155867a9b0f516957d91f0552263192e91df7044cc00f776580ec0aa2ec6035736561a04b2350b76c9223efac0709b2997185f93e1e78536b70f3be42408aae4ffe578626e7f96b5dee713c06edeeabb8a9447"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "server_public",
+          "shared_secret"
+        ],
+        "title": "TestDHModPResponse"
+      },
+      "TestSignatureRequest": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Message to be signed. Pass any string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "TestSignatureRequest"
+      },
+      "TestSignatureResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "success"
+          },
+          "public": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "$ref": "#/components/schemas/ECPPoint"
+              },
+              {
+                "$ref": "#/components/schemas/EC2mPoint"
+              },
+              {
+                "$ref": "#/components/schemas/ECPkPoint"
+              }
+            ],
+            "title": "Public",
+            "description": "Server public key. Use appropriate encoding for the endpoint.",
+            "examples": [
+              "2749358e03067a751b154eb4584ad97c04a5f49a0b4673e56c2ea07f248ac3799f51ea1b46f36bb653e980e65e8cb1ffd7dafe34e30370af81bcc8d99e3f126d0d5edf2f88fc9fe4175fb45639637925f43fe999f816cb8ecd6556d8774bf407ba2c9986f83e627ff295ee02b93d4bd83e01978ef1e9639879899f29412677e30fcafdf29810c07d7560d03c75f54a678117a3a8669261605a34a9d49a79c04189cf2ab73749b3ce62896a8d34155867a9b0f516957d91f0552263192e91df7044cc00f776580ec0aa2ec6035736561a04b2350b76c9223efac0709b2997185f93e1e78536b70f3be42408aae4ffe578626e7f96b5dee713c06edeeabb8a9447",
+              "bc401f23522edb3c65c4c3bfeafeb217ca067810ca1ae4b406b25d6f29db4eed76688355a32c978bd5f58ff2d990e6b1eecc67c8582d42fd9563e511b0580fa964b9256c037e71a032acfb0b52b421fdff1209c54a6618602912e2712ed17e2a6d8445f809b7e59c0adbb2b685bc5ba1282f1ae49ae5bfa1cfa729af6d50cec023e90998616fda6091a46ab9632740b0013ec787a23956bd517e1c0f11ee1ed966a8f6a761d3e1a454298b552696711a6dd792d5dfb5bf81eaf3730dabd33d949adde6d1045c41fca159f4025a9b78f9fea781650ad02f4faa5b1fa04d1ddfb502a8706f3f7e142321635266a7a501ee30f2a529e0f2f32499d618c99ced95f",
+              [
+                "10fe85cc90ec39c9aa37c55d20ee23c6690ee90df2dc76bd3818c9267fc8af2a",
+                "dcb28ed2b50bc852c5b42709aa81231da32e05a9066a903a7938d89002e9cdae",
+                "ebf324491b7736ebfe37c2dddece8d935f9941fa53fd5c46d9438adec0a04797",
+                "1e2e31ab500b2c15ac3e79238903929cd16e02c86b15173401fee627d2aa65d3",
+                "82d3bc98a0577091327c6ab3d304d3566ba1feab865eb866178c604ea49efb6f",
+                "4a7c87b336c726f329e7b419aa8483ec752505d7bf61ce44686c115466aae59f",
+                "a30dcbfb7e26007237730ff64f8ea132c34a04cddf0616b48cbedc4498954239",
+                "48b4148a47c2dd54f1766bc550974e0326814a5428e184adab9e1fe21196316d"
+              ]
+            ]
+          },
+          "signature": {
+            "$ref": "#/components/schemas/SchnorrSignatureModel",
+            "title": "Schnorr signature"
+          }
+        },
+        "type": "object",
+        "required": [
+          "public",
+          "signature"
+        ],
+        "title": "TestSignatureResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

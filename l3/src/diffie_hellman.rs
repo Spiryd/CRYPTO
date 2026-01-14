@@ -531,9 +531,6 @@ mod tests {
         // With same private key, public keys should match
         assert_eq!(alice_pk, bob_pk);
         assert_ne!(alice_pk, Point::Infinity);
-
-        // Note: Full ECDH test requires knowing the actual order of the generator point
-        // For production, use validated curve parameters with known orders
     }
 
     #[test]
@@ -559,6 +556,51 @@ mod tests {
 
         assert_ne!(result, Point::Infinity);
         assert_ne!(result, params.generator);
+    }
+
+    #[test]
+    fn test_ecdh_agreement_fp97() {
+        // Curve: y^2 = x^3 + 2x + 3 over F_97
+        let a = Fp97::from_u64(2);
+        let b = Fp97::from_u64(3);
+        let curve = EllipticCurve::new(a, b);
+
+        // Use a known on-curve point as generator (already used in your EC tests)
+        let g = Point::Affine {
+            x: Fp97::from_u64(3),
+            y: Fp97::from_u64(6),
+        };
+        assert!(curve.is_on_curve(&g));
+
+        let params = DHParamsEC {
+            field_description: "F_97".to_string(),
+            curve: curve.clone(),
+            generator: g.clone(),
+            q: 97, // not used in compute_* if you pass fixed sks; ok for test
+        };
+
+        // Use distinct scalars
+        let alice_sk: u64 = 7;
+        let bob_sk: u64 = 11;
+
+        let alice_pk = DHEC::<Fp97>::compute_public_key(&params, &alice_sk);
+        let bob_pk = DHEC::<Fp97>::compute_public_key(&params, &bob_sk);
+
+        // Shared secrets
+        let alice_ss = DHEC::<Fp97>::compute_shared_secret(&params, &alice_sk, &bob_pk);
+        let bob_ss = DHEC::<Fp97>::compute_shared_secret(&params, &bob_sk, &alice_pk);
+
+        // Core ECDH property
+        assert_eq!(alice_ss, bob_ss);
+
+        // Sanity: shared secret should be a valid curve point and typically not infinity
+        assert!(params.curve.is_on_curve(&alice_ss));
+        assert_ne!(alice_ss, Point::Infinity);
+
+        // Also ensure pk are valid and distinct
+        assert!(params.curve.is_on_curve(&alice_pk));
+        assert!(params.curve.is_on_curve(&bob_pk));
+        assert_ne!(alice_pk, bob_pk);
     }
 
     #[test]
@@ -620,5 +662,88 @@ mod tests {
         let shared2 = DHFp::<Fp97>::compute_shared_secret(&params, &b, &g_a);
 
         assert_eq!(shared1, shared2);
+    }
+
+    #[test]
+    fn dh_fp97_known_vector() {
+        // p=97, g=5
+        let params = DHParamsFp {
+            p_description: "97".to_string(),
+            g: Fp97::from_u64(5),
+            q: 48, // not used in compute_shared_secret in your impl
+        };
+
+        let a: u64 = 15;
+        let b: u64 = 27;
+
+        let a_pub = DHFp::<Fp97>::compute_public_key(&params, &a);
+        let b_pub = DHFp::<Fp97>::compute_public_key(&params, &b);
+
+        // Expected from math:
+        assert_eq!(a_pub, Fp97::from_u64(46));
+        assert_eq!(b_pub, Fp97::from_u64(34));
+
+        let s1 = DHFp::<Fp97>::compute_shared_secret(&params, &a, &b_pub);
+        let s2 = DHFp::<Fp97>::compute_shared_secret(&params, &b, &a_pub);
+
+        assert_eq!(s1, s2);
+        assert_eq!(s1, Fp97::from_u64(77));
+    }
+
+    #[test]
+    fn dh_gf256_known_vector() {
+        let params = DHParamsF2k {
+            k: 8,
+            m_description: "x^8 + x^4 + x^3 + x + 1".to_string(),
+            g: F2k8::from_u64(0x03),
+            q: 255,
+        };
+
+        let a: u64 = 112;
+        let b: u64 = 223;
+
+        let a_pub = DHF2k::<F2k8>::compute_public_key(&params, &a);
+        let b_pub = DHF2k::<F2k8>::compute_public_key(&params, &b);
+
+        assert_eq!(a_pub, F2k8::from_u64(0xFE));
+        assert_eq!(b_pub, F2k8::from_u64(0x0E));
+
+        let s1 = DHF2k::<F2k8>::compute_shared_secret(&params, &a, &b_pub);
+        let s2 = DHF2k::<F2k8>::compute_shared_secret(&params, &b, &a_pub);
+
+        assert_eq!(s1, s2);
+        assert_eq!(s1, F2k8::from_u64(0x4B));
+    }
+
+    #[test]
+    fn dh_f5_2_known_vector() {
+        // g = 1 + x
+        let g_coeffs = [BigInt::from_u64(1), BigInt::from_u64(1)];
+        let params = DHParamsFpk {
+            p_description: "5".to_string(),
+            k: 2,
+            m_description: "x^2 + 2".to_string(),
+            g: F52::from_coeffs(g_coeffs),
+            q: 24,
+        };
+
+        let a: u64 = 7;
+        let b: u64 = 11;
+
+        let a_pub = DHFpk::<F52>::compute_public_key(&params, &a);
+        let b_pub = DHFpk::<F52>::compute_public_key(&params, &b);
+
+        let exp_a_pub = F52::from_coeffs([BigInt::from_u64(3), BigInt::from_u64(3)]); // 3 + 3x
+        let exp_b_pub = F52::from_coeffs([BigInt::from_u64(3), BigInt::from_u64(2)]); // 3 + 2x
+        let exp_s = F52::from_coeffs([BigInt::from_u64(1), BigInt::from_u64(4)]); // 1 + 4x
+
+        assert_eq!(a_pub, exp_a_pub);
+        assert_eq!(b_pub, exp_b_pub);
+
+        let s1 = DHFpk::<F52>::compute_shared_secret(&params, &a, &b_pub);
+        let s2 = DHFpk::<F52>::compute_shared_secret(&params, &b, &a_pub);
+
+        assert_eq!(s1, s2);
+        assert_eq!(s1, exp_s);
     }
 }
