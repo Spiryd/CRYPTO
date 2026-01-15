@@ -2,9 +2,13 @@
 //!
 //! This example benchmarks Schnorr signature performance at different security levels:
 //! - TOY: Small fields for testing only (~7-bit)
-//! - 128-bit security: EC-256 (secp256k1) vs DL-3072 (RFC 3526 Group 15)
-//! - 192-bit security: EC-384 (P-384) vs DL-6144 (RFC 3526 Group 17)
-//! - 256-bit security: EC-521 (P-521) - DL-15360 omitted (too slow)
+//! - 128-bit security: EC-256 (secp256k1) vs MODP-3072 (RFC 3526 Group 15)
+//! - ~170-bit security: MODP-6144 (RFC 3526 Group 17) - between 128 and 192-bit
+//! - 192-bit security: EC-384 (P-384)
+//! - 256-bit security: EC-521 (P-521) - MODP-15360 omitted (too slow)
+//!
+//! MODP = multiplicative group of F_p* (security from discrete log problem)
+//! EC = elliptic curve group (security from elliptic curve discrete log problem)
 //!
 //! Security level equivalences follow NIST SP 800-57 / keylength.com guidelines.
 //!
@@ -158,10 +162,122 @@ type Fp3072 = PrimeField<F3072Config, 48>;
 /// RFC 3526 Group 17: 6144-bit MODP prime (~170-bit security)
 /// p = 2^6144 - 2^6080 - 1 + 2^64 * { [2^6014 pi] + 929484 }
 #[derive(Clone, Debug)]
-#[allow(dead_code)]
 struct F6144Config;
 
-// RFC 3526 Group 17 hex representation
+/// Pre-computed little-endian limbs for RFC 3526 Group 17
+static RFC3526_GROUP17_LIMBS: [u64; 96] = [
+    0xFFFFFFFFFFFFFFFF,
+    0xE694F91E6DCC4024,
+    0x12BF2D5B0B7474D6,
+    0x043E8F663F4860EE,
+    0x387FE8D76E3C0468,
+    0xDA56C9EC2EF29632,
+    0xEB19CCB1A313D55C,
+    0xF550AA3D8A1FBFF0,
+    0x06A1D58BB7C5DA76,
+    0xA79715EEF29BE328,
+    0x14CC5ED20F8037E0,
+    0xCC8F6D7EBF48E1D8,
+    0x4BD407B22B4154AA,
+    0x0F1D45B7FF585AC5,
+    0x23A97A7E36CC88BE,
+    0x59E7C97FBEC7E8F3,
+    0xB5A84031900B1C9E,
+    0xD55E702F46980C82,
+    0xF482D7CE6E74FEF6,
+    0xF032EA15D1721D03,
+    0x5983CA01C64B92EC,
+    0x6FB8F401378CD2BF,
+    0x332051512BD7AF42,
+    0xDB7F1447E6CC254B,
+    0x44CE6CBACED4BB1B,
+    0xDA3EDBEBCF9B14ED,
+    0x179727B0865A8918,
+    0xB06A53ED9027D831,
+    0xE5DB382F413001AE,
+    0xF8FF9406AD9E530E,
+    0xC9751E763DBA37BD,
+    0xC1D4DCB2602646DE,
+    0x36C3FAB4D27C7026,
+    0x4DF435C934028492,
+    0x86FFB7DC90A6C08F,
+    0x93B4EA988D8FDDC1,
+    0xD0069127D5B05AA9,
+    0xB81BDD762170481C,
+    0x1F612970CEE2D7AF,
+    0x233BA186515BE7ED,
+    0x99B2964FA090C3A2,
+    0x287C59474E6BC05D,
+    0x2E8EFC141FBECAA6,
+    0xDBBBC2DB04DE8EF9,
+    0x2583E9CA2AD44CE8,
+    0x1A946834B6150BDA,
+    0x99C327186AF4E23C,
+    0x88719A10BDBA5B26,
+    0x1A723C12A787E6D7,
+    0x4B82D120A9210801,
+    0x43DB5BFCE0FD108E,
+    0x08E24FA074E5AB31,
+    0x770988C0BAD946E2,
+    0xBBE117577A615D6C,
+    0x521F2B18177B200C,
+    0xD87602733EC86A64,
+    0xF12FFA06D98A0864,
+    0xCEE3D2261AD2EE6B,
+    0x1E8C94E04A25619D,
+    0xABF5AE8CDB0933D7,
+    0xB3970F85A6E1E4C7,
+    0x8AEA71575D060C7D,
+    0xECFB850458DBEF0A,
+    0xA85521ABDF1CBA64,
+    0xAD33170D04507A33,
+    0x15728E5A8AAAC42D,
+    0x15D2261898FA0510,
+    0x3995497CEA956AE5,
+    0xDE2BCBF695581718,
+    0xB5C55DF06F4C52C9,
+    0x9B2783A2EC07A28F,
+    0xE39E772C180E8603,
+    0x32905E462E36CE3B,
+    0xF1746C08CA18217C,
+    0x670C354E4ABC9804,
+    0x9ED529077096966D,
+    0x1C62F356208552BB,
+    0x83655D23DCA3AD96,
+    0x69163FA8FD24CF5F,
+    0x98DA48361C55D39A,
+    0xC2007CB8A163BF05,
+    0x49286651ECE45B3D,
+    0xAE9F24117C4B1FE6,
+    0xEE386BFB5A899FA5,
+    0x0BFF5CB6F406B7ED,
+    0xF44C42E9A637ED6B,
+    0xE485B576625E7EC6,
+    0x4FE1356D6D51C245,
+    0x302B0A6DF25F1437,
+    0xEF9519B3CD3A431B,
+    0x514A08798E3404DD,
+    0x020BBEA63B139B22,
+    0x29024E088A67CC74,
+    0xC4C6628B80DC1CD1,
+    0xC90FDAA22168C234,
+    0xFFFFFFFFFFFFFFFF,
+];
+
+static F6144_MOD: BigInt6144 = BigInt::from_limbs_internal(RFC3526_GROUP17_LIMBS);
+
+impl FieldConfig<96> for F6144Config {
+    fn modulus() -> &'static BigInt6144 {
+        &F6144_MOD
+    }
+    fn irreducible() -> &'static [BigInt6144] {
+        &[]
+    }
+}
+type Fp6144 = PrimeField<F6144Config, 96>;
+
+// RFC 3526 Group 17 hex representation (kept for reference)
+#[allow(dead_code)]
 const RFC3526_GROUP17_HEX: &str = concat!(
     "FFFFFFFF", "FFFFFFFF", "C90FDAA2", "2168C234", "C4C6628B", "80DC1CD1", "29024E08", "8A67CC74",
     "020BBEA6", "3B139B22", "514A0879", "8E3404DD", "EF9519B3", "CD3A431B", "302B0A6D", "F25F1437",
@@ -189,6 +305,7 @@ const RFC3526_GROUP17_HEX: &str = concat!(
     "043E8F66", "3F4860EE", "12BF2D5B", "0B7474D6", "E694F91E", "6DCC4024", "FFFFFFFF", "FFFFFFFF"
 );
 
+#[allow(dead_code)]
 fn get_rfc3526_group17_prime() -> BigInt6144 {
     BigInt6144::from_hex(RFC3526_GROUP17_HEX)
 }
@@ -464,7 +581,6 @@ fn main() {
     println!();
     println!("+===================================================================+");
     println!("|     Schnorr Signature Benchmark - Multi-Security Comparison       |");
-    println!("|   Security levels follow NIST SP 800-57 / keylength.com           |");
     println!("+===================================================================+");
     println!();
 
@@ -481,12 +597,13 @@ fn main() {
     println!("[TOY SECURITY (~7-bit) - For Testing Only]");
     println!();
 
+    // MODP = multiplicative group of F_p (discrete log based)
     {
         let generator = Fp97::new(BigInt::from_u64(5));
         let order = BigInt256::from_u64(96);
         let params: SchnorrParamsField<Fp97, 4> = SchnorrParamsField { generator, order };
         let result = benchmark_schnorr_field(
-            "DL: F_97",
+            "MODP: F_97",
             params,
             BigInt256::from_u64(42),
             BigInt256::from_u64(73),
@@ -498,10 +615,11 @@ fn main() {
     }
 
     // ========================================================================
-    // 128-bit Security: EC-256 (secp256k1) vs DL-3072
+    // 128-bit Security: EC-256 (secp256k1) vs MODP-3072
     // ========================================================================
     println!();
-    println!("[128-BIT SECURITY: EC-256 (secp256k1) vs DL-3072 (RFC 3526)]");
+    println!("[128-BIT SECURITY: EC-256 (secp256k1) vs MODP-3072 (RFC 3526)]");
+    println!("(MODP = finite-field multiplicative group; security from discrete log problem)");
     println!();
 
     // EC-256: secp256k1
@@ -541,7 +659,9 @@ fn main() {
         results.push(result);
     }
 
-    // DL-3072: RFC 3526 Group 15
+    // MODP-3072: RFC 3526 Group 15
+    // Generator selection: start with g=2; if g^q = 1 it's already in the
+    // order-q subgroup; if g^q = -1, use g^2 to enter the order-q subgroup.
     {
         let order = compute_subgroup_order(&F3072_MOD);
         let one_field = Fp3072::new(BigInt3072::from_u64(1));
@@ -569,7 +689,7 @@ fn main() {
         let private_key = generate_full_size_scalar(b"benchmark_private_key_128", &order);
         let base_nonce = generate_full_size_scalar(b"benchmark_nonce_128", &order);
         let result = benchmark_schnorr_field(
-            "DL: RFC3526-3072",
+            "MODP: RFC3526-3072",
             params,
             private_key,
             base_nonce,
@@ -581,46 +701,63 @@ fn main() {
     }
 
     // ========================================================================
-    // ~170-bit Security: DL-6144 (RFC 3526 Group 17)
+    // ~170-bit Security: MODP-6144 (RFC 3526 Group 17)
     // Provides a second DL security level for comparison
     // ========================================================================
     println!();
-    println!("[~170-BIT SECURITY: DL-6144 (RFC 3526 Group 17)]");
-    println!("(Between 128-bit and 192-bit; closest standardized DL group)");
+    println!("[~170-BIT SECURITY: MODP-6144 (RFC 3526 Group 17)]");
+    println!("(Between 128-bit and 192-bit; closest standardized MODP group)");
+    println!("(Note: Single iteration due to very slow 6144-bit arithmetic)");
     println!();
 
-    // DL-6144: RFC 3526 Group 17
-    // Note: This is slow! Single iteration only.
+    // MODP-6144: RFC 3526 Group 17
+    // Using full SchnorrFieldImpl (field arithmetic, proper Schnorr protocol)
     {
-        let p_6144 = get_rfc3526_group17_prime();
-        let order_6144 = compute_subgroup_order(&p_6144);
+        let iterations_170 = 1; // Very slow - single iteration only
 
-        // We need a runtime FieldConfig for this. Use a closure-based approach.
-        // For simplicity, we'll just time the raw exponentiation cost.
-        println!("  DL-6144: Running single-iteration benchmark (very slow)...");
+        // Safe prime: p = 2q + 1, so order of subgroup = q = (p-1)/2
+        let order = {
+            let one = BigInt6144::from_u64(1);
+            let (pm1, _) = F6144_MOD.sub_with_borrow(&one);
+            pm1.shr(1) // q = (p-1)/2
+        };
 
-        // Create base g=2
-        let g_raw = BigInt6144::from_u64(2);
+        // Generator selection: start with g=2; if g^q = 1 it's already in the
+        // order-q subgroup; if g^q = -1, use g^2 to enter the order-q subgroup.
+        let one_field = Fp6144::new(BigInt6144::from_u64(1));
+        let p_minus_1 = {
+            let one = BigInt6144::from_u64(1);
+            let (pm1, _) = F6144_MOD.sub_with_borrow(&one);
+            pm1
+        };
+        let minus_one_field = Fp6144::new(p_minus_1);
 
-        // Time a single exponentiation (represents ~keygen cost)
-        let exp = generate_full_size_scalar(b"benchmark_exp_6144", &order_6144);
-        let start = Instant::now();
-        let _ = g_raw.mod_pow(&exp, &p_6144);
-        let single_exp_time = start.elapsed();
+        let g = Fp6144::new(BigInt6144::from_u64(2));
+        let g_to_q = g.pow(&order.to_le_bytes_vec());
+        let generator = if g_to_q == one_field {
+            g
+        } else if g_to_q == minus_one_field {
+            g.clone() * g.clone()
+        } else {
+            panic!("Generator has unexpected order!");
+        };
 
-        println!("  Single 6144-bit modexp: {:?}", single_exp_time);
-        println!("  (Signing ≈ 2× this, Verification ≈ 2× this)");
-        println!();
-
-        // Add a synthetic result for the summary table
-        results.push(BenchmarkResult {
-            name: "DL: RFC3526-6144".to_string(),
-            keygen_time: single_exp_time,
-            sign_time: single_exp_time * 2, // ~2 exponentiations
-            verify_time: single_exp_time * 2,
-            iterations: 1,
-            security_bits: 170,
-        });
+        let params: SchnorrParamsField<Fp6144, 96> = SchnorrParamsField {
+            generator,
+            order: order.clone(),
+        };
+        let private_key = generate_full_size_scalar(b"benchmark_private_key_170", &order);
+        let base_nonce = generate_full_size_scalar(b"benchmark_nonce_170", &order);
+        let result = benchmark_schnorr_field(
+            "MODP: RFC3526-6144",
+            params,
+            private_key,
+            base_nonce,
+            iterations_170,
+            170,
+        );
+        result.print();
+        results.push(result);
     }
 
     // ========================================================================
@@ -673,11 +810,11 @@ fn main() {
 
     // ========================================================================
     // 256-bit Security: EC-521 (P-521)
-    // DL-15360 omitted as impractically slow
+    // MODP-15360 omitted as impractically slow
     // ========================================================================
     println!();
     println!("[256-BIT SECURITY: EC-521 (P-521)]");
-    println!("(DL-15360 omitted - would need ~240 limbs, impractical runtime)");
+    println!("(MODP-15360 omitted - would need ~240 limbs, impractical runtime)");
     println!();
 
     // EC-521: NIST P-521
@@ -725,23 +862,24 @@ fn main() {
     // Summary Table
     // ========================================================================
     println!();
-    println!("+===================================================================+");
-    println!("|                 Performance Comparison Summary                    |");
-    println!("+===================================================================+");
-    println!("| Implementation              | Sec |   Sign      |    Verify      |");
-    println!("+-----------------------------+-----+-------------+----------------+");
+    println!("+============================================================================+");
+    println!("|                    Performance Comparison Summary                          |");
+    println!("+============================================================================+");
+    println!("| Implementation              | Sec | Iter |   Sign      |    Verify        |");
+    println!("+-----------------------------+-----+------+-------------+------------------+");
     for result in &results {
         println!(
-            "| {:27} | {:>3} | {:>11.3?} | {:>14.3?} |",
+            "| {:27} | {:>3} | {:>4} | {:>11.3?} | {:>16.3?} |",
             if result.name.len() > 27 {
                 &result.name[..27]
             } else {
                 &result.name
             },
             result.security_bits,
+            result.iterations,
             result.sign_time / result.iterations,
             result.verify_time / result.iterations
         );
     }
-    println!("+===================================================================+");
+    println!("+============================================================================+");
 }
