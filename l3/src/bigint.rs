@@ -77,6 +77,92 @@ impl<const N: usize> BigInt<N> {
         Self { limbs }
     }
 
+    /// Creates a BigInt from a hexadecimal string (big-endian encoding)
+    ///
+    /// Parses a hex string like "1A2B3C" into its numeric value.
+    /// Supports both uppercase and lowercase hex digits.
+    ///
+    /// # Arguments
+    /// * `hex` - Hex string without "0x" prefix
+    ///
+    /// # Panics
+    /// Panics if the hex string contains invalid characters or is too large.
+    pub fn from_hex(hex: &str) -> Self {
+        let hex = hex.trim();
+        if hex.is_empty() {
+            return Self::zero();
+        }
+
+        // Parse hex string into bytes (big-endian)
+        let hex_bytes: Vec<u8> = hex.as_bytes().to_vec();
+        let mut bytes = Vec::new();
+
+        // Pad to even length
+        let padded = if hex_bytes.len() % 2 == 1 {
+            let mut p = vec![b'0'];
+            p.extend_from_slice(&hex_bytes);
+            p
+        } else {
+            hex_bytes
+        };
+
+        for chunk in padded.chunks(2) {
+            let s = std::str::from_utf8(chunk).expect("Invalid UTF8 in hex");
+            let byte = u8::from_str_radix(s, 16).expect("Invalid hex digit");
+            bytes.push(byte);
+        }
+
+        Self::from_be_bytes(&bytes)
+    }
+
+    /// Creates a BigInt from big-endian bytes
+    ///
+    /// # Arguments
+    /// * `bytes` - Byte slice in big-endian order (most significant byte first)
+    pub fn from_be_bytes(bytes: &[u8]) -> Self {
+        let mut limbs = [0u64; N];
+
+        // Process bytes from end (least significant) to start (most significant)
+        for (i, &byte) in bytes.iter().rev().enumerate() {
+            let limb_idx = i / 8;
+            let byte_idx = i % 8;
+            if limb_idx < N {
+                limbs[limb_idx] |= (byte as u64) << (byte_idx * 8);
+            }
+        }
+
+        Self { limbs }
+    }
+
+    /// Creates a BigInt from little-endian bytes
+    ///
+    /// # Arguments  
+    /// * `bytes` - Byte slice in little-endian order (least significant byte first)
+    pub fn from_le_bytes(bytes: &[u8]) -> Self {
+        let mut limbs = [0u64; N];
+
+        for (i, &byte) in bytes.iter().enumerate() {
+            let limb_idx = i / 8;
+            let byte_idx = i % 8;
+            if limb_idx < N {
+                limbs[limb_idx] |= (byte as u64) << (byte_idx * 8);
+            }
+        }
+
+        Self { limbs }
+    }
+
+    /// Returns the value as little-endian bytes
+    pub fn to_le_bytes_vec(&self) -> Vec<u8> {
+        let mut bytes = Vec::with_capacity(N * 8);
+        for &limb in self.limbs.iter() {
+            for byte_idx in 0..8 {
+                bytes.push(((limb >> (byte_idx * 8)) & 0xFF) as u8);
+            }
+        }
+        bytes
+    }
+
     /// Gets a reference to the internal limbs array
     ///
     /// Limbs are in little-endian order (least significant limb first).
@@ -97,7 +183,7 @@ impl<const N: usize> BigInt<N> {
     ///
     /// # Returns
     /// A BigInt with the given limbs
-    pub(crate) const fn from_limbs_internal(limbs: [u64; N]) -> Self {
+    pub const fn from_limbs_internal(limbs: [u64; N]) -> Self {
         Self { limbs }
     }
 
@@ -382,6 +468,151 @@ impl<const N: usize> BigInt<N> {
     /// Modular reduction: self mod modulus
     pub fn modulo(&self, modulus: &Self) -> Self {
         self.div_rem(modulus).1
+    }
+
+    /// Modular addition: (self + other) mod modulus
+    /// Assumes self and other are both < modulus
+    pub fn mod_add(&self, other: &Self, modulus: &Self) -> Self {
+        let (sum, overflow) = self.add_with_carry(other);
+
+        if overflow {
+            // Sum is sum + 2^(N*64), which is definitely >= modulus
+            // Since self, other < modulus, we have sum + 2^(N*64) < 2*modulus + 2^(N*64)
+            // But for typical cryptographic moduli close to 2^(N*64),
+            // we can just subtract modulus from sum (the low bits)
+            // because 2^(N*64) mod modulus ≈ 2^(N*64) - modulus
+            // So (sum + 2^(N*64)) mod modulus = sum + (2^(N*64) - modulus) = sum - modulus + 2^(N*64)
+            // But we only have the low bits, so this becomes: sum - modulus (+ any carry which is implicit)
+            sum.sub_with_borrow(modulus).0
+        } else if sum.compare(modulus) != Ordering::Less {
+            sum.sub_with_borrow(modulus).0
+        } else {
+            sum
+        }
+    }
+
+    /// Modular subtraction: (self - other) mod modulus
+    pub fn mod_sub(&self, other: &Self, modulus: &Self) -> Self {
+        if self.compare(other) != Ordering::Less {
+            self.sub_with_borrow(other).0
+        } else {
+            // self < other, need to add modulus
+            let diff = other.sub_with_borrow(self).0;
+            modulus.sub_with_borrow(&diff).0
+        }
+    }
+
+    /// Modular multiplication: (self * other) mod modulus
+    /// Uses schoolbook multiplication with reduction
+    pub fn mod_mul(&self, other: &Self, modulus: &Self) -> Self {
+        // Use double-width multiplication for correctness
+        // We'll do it with the shift-and-add method to handle overflow
+        let mut result = Self::zero();
+        let mut temp = other.modulo(modulus);
+
+        // Only iterate up to actual bit length for performance
+        let max_bits = self.bit_length();
+
+        for i in 0..max_bits {
+            let limb_idx = i / 64;
+            let bit_idx = i % 64;
+
+            if (self.limbs[limb_idx] >> bit_idx) & 1 == 1 {
+                result = result.mod_add(&temp, modulus);
+            }
+
+            // Double temp
+            temp = temp.mod_add(&temp, modulus);
+        }
+
+        result
+    }
+
+    /// Modular exponentiation: self^exp mod modulus using square-and-multiply
+    pub fn mod_pow(&self, exp: &Self, modulus: &Self) -> Self {
+        if modulus.is_one() {
+            return Self::zero();
+        }
+
+        let mut result = Self::one();
+        let mut base = self.modulo(modulus);
+
+        // Only process up to actual bit length of exponent for performance
+        let exp_bits = exp.bit_length();
+
+        for i in 0..exp_bits {
+            let limb_idx = i / 64;
+            let bit_idx = i % 64;
+
+            if (exp.limbs[limb_idx] >> bit_idx) & 1 == 1 {
+                result = result.mod_mul(&base, modulus);
+            }
+
+            base = base.mod_mul(&base, modulus);
+        }
+
+        result
+    }
+
+    /// Extended Euclidean algorithm: returns (gcd, x, y) where gcd = a*x + b*y
+    /// Note: x and y may be negative (represented as positive remainders mod appropriate values)
+    pub fn extended_gcd(a: &Self, b: &Self) -> (Self, Self, Self, bool, bool) {
+        // Returns (gcd, |x|, |y|, x_negative, y_negative)
+        if b.is_zero() {
+            return (*a, Self::one(), Self::zero(), false, false);
+        }
+
+        let (q, r) = a.div_rem(b);
+        let (gcd, x1, y1, x1_neg, y1_neg) = Self::extended_gcd(b, &r);
+
+        // x = y1
+        // y = x1 - q * y1
+        let qy1 = q.mul_mod(&y1);
+
+        let (y, y_neg) = if x1_neg == y1_neg {
+            // x1 and q*y1 have same sign, subtract magnitudes
+            if x1.compare(&qy1) != Ordering::Less {
+                (x1.sub_with_borrow(&qy1).0, x1_neg)
+            } else {
+                (qy1.sub_with_borrow(&x1).0, !x1_neg)
+            }
+        } else {
+            // Different signs, add magnitudes
+            (x1.add_with_carry(&qy1).0, x1_neg)
+        };
+
+        (gcd, y1, y, y1_neg, y_neg)
+    }
+
+    /// Modular inverse: self^(-1) mod modulus
+    /// Returns None if gcd(self, modulus) != 1
+    pub fn mod_inverse(&self, modulus: &Self) -> Option<Self> {
+        let a = self.modulo(modulus);
+        if a.is_zero() {
+            return None;
+        }
+
+        let (gcd, x, _, x_neg, _) = Self::extended_gcd(&a, modulus);
+
+        if !gcd.is_one() {
+            return None;
+        }
+
+        if x_neg {
+            Some(modulus.sub_with_borrow(&x.modulo(modulus)).0)
+        } else {
+            Some(x.modulo(modulus))
+        }
+    }
+
+    /// Get a specific bit (0-indexed from least significant)
+    pub fn get_bit(&self, idx: usize) -> bool {
+        if idx >= Self::BITS {
+            return false;
+        }
+        let limb_idx = idx / 64;
+        let bit_idx = idx % 64;
+        (self.limbs[limb_idx] >> bit_idx) & 1 == 1
     }
 
     /// Bitwise NOT operation

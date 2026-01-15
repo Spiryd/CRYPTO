@@ -140,12 +140,18 @@ impl<C: FieldConfig<N>, const N: usize> Sub for PrimeField<C, N> {
 }
 
 // Implement multiplication: a * b (mod p)
+// Uses mod_mul to correctly handle arbitrary-precision multiplication
+// without overflow truncation
 impl<C: FieldConfig<N>, const N: usize> Mul for PrimeField<C, N> {
     type Output = Self;
 
     fn mul(self, other: Self) -> Self {
-        let product = self.value * other.value;
-        Self::new(product)
+        // Use mod_mul for correct modular multiplication without overflow
+        let product = self.value.mod_mul(&other.value, C::modulus());
+        Self {
+            value: product,
+            _config: PhantomData,
+        }
     }
 }
 
