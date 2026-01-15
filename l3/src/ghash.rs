@@ -133,8 +133,6 @@ pub fn ghash(h: GF128, a: &[u8], c: &[u8]) -> GF128 {
     x
 }
 
-// -----------------------------------------------------------------------------// Encoding helpers
-// -----------------------------------------------------------------------------//
 // We keep two explicit encodings:
 //
 // 1) GCM/GHASH block encoding (DEFAULT for this module):

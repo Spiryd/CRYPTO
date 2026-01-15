@@ -40,10 +40,10 @@ type BigInt384 = BigInt<6>;
 // 521-bit (P-521): 9 limbs * 64 = 576 bits (covers 521)
 type BigInt576 = BigInt<9>;
 
-// 3072-bit DL (128-bit security): 48 limbs * 64 = 3072 bits
+// 3072-bit MODP (128-bit security): 48 limbs * 64 = 3072 bits
 type BigInt3072 = BigInt<48>;
 
-// 6144-bit DL (~170-bit security): 96 limbs * 64 = 6144 bits
+// 6144-bit MODP (~170-bit security): 96 limbs * 64 = 6144 bits
 type BigInt6144 = BigInt<96>;
 
 // ============================================================================
@@ -65,7 +65,7 @@ impl FieldConfig<4> for F97Config {
 type Fp97 = PrimeField<F97Config, 4>;
 
 // ============================================================================
-// Field Configurations - 128-bit Security (EC-256 + DL-3072)
+// Field Configurations - 128-bit Security (EC-256 + MODP-3072)
 // ============================================================================
 
 /// secp256k1 field: p = 2^256 - 2^32 - 977
@@ -156,10 +156,11 @@ impl FieldConfig<48> for F3072Config {
 type Fp3072 = PrimeField<F3072Config, 48>;
 
 // ============================================================================
-// Field Configurations - ~170-bit Security (DL-6144)
+// Field Configurations - ~170-bit Security (MODP-6144, rule-of-thumb equivalence)
 // ============================================================================
 
-/// RFC 3526 Group 17: 6144-bit MODP prime (~170-bit security)
+/// RFC 3526 Group 17: 6144-bit MODP prime
+/// Security: ~170-bit (rule-of-thumb; not an official NIST security level)
 /// p = 2^6144 - 2^6080 - 1 + 2^64 * { [2^6014 pi] + 929484 }
 #[derive(Clone, Debug)]
 struct F6144Config;
@@ -440,12 +441,12 @@ fn generate_full_size_scalar<const N: usize>(seed: &[u8], order: &BigInt<N>) -> 
 
     let byte_len = N * 8;
     let mut bytes = vec![0u8; byte_len];
-    let chunks = (byte_len + 31) / 32;
+    let chunks = byte_len.div_ceil(32);
 
     for i in 0..chunks {
         let mut hasher = Sha256::new();
         hasher.update(seed);
-        hasher.update(&(i as u32).to_le_bytes());
+        hasher.update((i as u32).to_le_bytes());
         let hash = hasher.finalize();
         let start = i * 32;
         let end = std::cmp::min(start + 32, byte_len);
@@ -454,10 +455,10 @@ fn generate_full_size_scalar<const N: usize>(seed: &[u8], order: &BigInt<N>) -> 
     }
 
     let mut limbs = [0u64; N];
-    for i in 0..N {
+    for (i, limb) in limbs.iter_mut().enumerate() {
         let offset = i * 8;
         if offset + 8 <= bytes.len() {
-            limbs[i] = u64::from_le_bytes([
+            *limb = u64::from_le_bytes([
                 bytes[offset],
                 bytes[offset + 1],
                 bytes[offset + 2],
@@ -477,7 +478,7 @@ fn generate_full_size_scalar<const N: usize>(seed: &[u8], order: &BigInt<N>) -> 
 // Generic Benchmark Functions
 // ============================================================================
 
-/// Benchmark Schnorr over DL groups (prime fields)
+/// Benchmark Schnorr over MODP groups (prime field multiplicative groups)
 fn benchmark_schnorr_field<F, const N: usize>(
     name: &str,
     params: SchnorrParamsField<F, N>,
@@ -583,6 +584,10 @@ fn main() {
     println!("|     Schnorr Signature Benchmark - Multi-Security Comparison       |");
     println!("+===================================================================+");
     println!();
+    println!("MODP groups use modular exponentiation (heavy at 3072/6144 bits).");
+    println!("EC groups use scalar multiplication (faster at comparable security).");
+    println!("Iteration counts vary by security level due to runtime constraints.");
+    println!();
 
     let iterations_toy = 100;
     let iterations_128 = 10;
@@ -684,7 +689,7 @@ fn main() {
 
         let params: SchnorrParamsField<Fp3072, 48> = SchnorrParamsField {
             generator,
-            order: order.clone(),
+            order,
         };
         let private_key = generate_full_size_scalar(b"benchmark_private_key_128", &order);
         let base_nonce = generate_full_size_scalar(b"benchmark_nonce_128", &order);
@@ -702,11 +707,11 @@ fn main() {
 
     // ========================================================================
     // ~170-bit Security: MODP-6144 (RFC 3526 Group 17)
-    // Provides a second DL security level for comparison
+    // Provides a second MODP security level for comparison
     // ========================================================================
     println!();
     println!("[~170-BIT SECURITY: MODP-6144 (RFC 3526 Group 17)]");
-    println!("(Between 128-bit and 192-bit; closest standardized MODP group)");
+    println!("(Rule-of-thumb ~170-bit; not an official NIST level)");
     println!("(Note: Single iteration due to very slow 6144-bit arithmetic)");
     println!();
 
@@ -744,7 +749,7 @@ fn main() {
 
         let params: SchnorrParamsField<Fp6144, 96> = SchnorrParamsField {
             generator,
-            order: order.clone(),
+            order,
         };
         let private_key = generate_full_size_scalar(b"benchmark_private_key_170", &order);
         let base_nonce = generate_full_size_scalar(b"benchmark_nonce_170", &order);
