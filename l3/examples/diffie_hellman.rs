@@ -14,7 +14,7 @@
 
 use l3::bigint::BigInt;
 use l3::diffie_hellman::*;
-use l3::elliptic_curve::{EllipticCurve, Point};
+use l3::elliptic_curve::{BinaryEllipticCurve, EllipticCurve, Point};
 use l3::field::{BinaryField, ExtensionField, FieldConfig, PrimeField};
 
 // ============================================================================
@@ -96,24 +96,31 @@ impl FieldConfig<4> for F5_2 {
 type F52 = ExtensionField<F5_2, 4, 2>;
 
 // ============================================================================
-// Field Configuration: F_101 (larger prime for elliptic curves)
+// Field Configuration: F_2^4 (GF16 for binary elliptic curves)
 // ============================================================================
 
 #[derive(Clone, Debug)]
-struct F101;
+struct F2_4;
 
-static F101_MODULUS: BigInt<4> = BigInt::from_u64(101);
+// Irreducible polynomial: x^4 + x + 1
+static F2_4_IRRED: [BigInt<4>; 5] = [
+    BigInt::from_u64(1), // x^0
+    BigInt::from_u64(1), // x^1
+    BigInt::from_u64(0), // x^2
+    BigInt::from_u64(0), // x^3
+    BigInt::from_u64(1), // x^4
+];
 
-impl FieldConfig<4> for F101 {
+impl FieldConfig<4> for F2_4 {
     fn modulus() -> &'static BigInt<4> {
-        &F101_MODULUS
+        &F2_MOD
     }
     fn irreducible() -> &'static [BigInt<4>] {
-        &[]
+        &F2_4_IRRED
     }
 }
 
-type Fp101 = PrimeField<F101, 4>;
+type GF16 = BinaryField<F2_4, 4, 4>;
 
 // ============================================================================
 // Helper function to simulate a two-party key exchange
@@ -256,66 +263,174 @@ fn main() {
     );
 
     // ========================================================================
-    // Example 4: ECDH over prime field F_101
+    // Example 4: ECDH over prime field F_97
     // ========================================================================
 
     println!("\n\n");
     println!("┌────────────────────────────────────────────────────────────────────────────┐");
-    println!("│ Example 4: Elliptic Curve DH over F_101                                   │");
+    println!("│ Example 4: Elliptic Curve DH over F_97                                    │");
     println!("└────────────────────────────────────────────────────────────────────────────┘");
 
-    // Curve: y^2 = x^3 + 2x + 3 over F_101
-    let a = Fp101::from_u64(2);
-    let b = Fp101::from_u64(3);
-    let curve = EllipticCurve::new(a, b);
+    // Curve: y^2 = x^3 + 2x + 3 over F_97
+    // This curve has a generator (3, 6) with order 5
+    let curve = EllipticCurve::new(Fp97::from_u64(2), Fp97::from_u64(3));
+    let generator = Point::Affine {
+        x: Fp97::from_u64(3),
+        y: Fp97::from_u64(6),
+    };
+    
+    // Verify the generator is on the curve
+    assert!(curve.is_on_curve(&generator), "Generator must be on curve");
 
-    // Generator point G = (17, 26)
-    let gx = Fp101::from_u64(17);
-    let gy = Fp101::from_u64(26);
-    let generator = Point::Affine { x: gx, y: gy };
-
-    // Note: For simplicity, using a smaller order value
-    // In production, you'd compute the actual order of the generator
     let ecdh_fp_params = DHParamsEC {
-        field_description: "F_101".to_string(),
+        field_description: "F_97".to_string(),
         curve,
-        generator,
-        q: BigInt::from_u64(17), // Using small order for demo purposes
+        generator: generator.clone(),
+        q: BigInt::from_u64(5), // Order of generator point
     };
 
     println!("\nDomain Parameters:");
     println!("  Field:       {}", ecdh_fp_params.field_description);
     println!("  Curve:       y^2 = x^3 + 2x + 3");
-    println!("  Generator G: {:?}", ecdh_fp_params.generator);
-    println!("  Order q:     {:?}", ecdh_fp_params.q);
+    println!("  Generator G: (3, 6)");
+    println!("  Order q:     5");
 
-    // Special display for elliptic curve points
-    let alice_random = BigInt::from_u64(5);
-    let bob_random = BigInt::from_u64(7);
-
-    println!("\nECDH Key Exchange (F_101)");
+    println!("\nECDH Key Exchange (F_97)");
     println!("{}", "=".repeat(80));
 
+    // Use direct private keys (coprime to order 5)
+    // Bypassing generate_private_key for this demo to use exact values
+    let alice_sk: BigInt<4> = BigInt::from_u64(2);
+    let bob_sk: BigInt<4> = BigInt::from_u64(3);
+
     // Alice's keys
-    let alice_sk = DHEC::<Fp101, 4>::generate_private_key(&ecdh_fp_params, &alice_random);
-    let alice_pk = DHEC::<Fp101, 4>::compute_public_key(&ecdh_fp_params, &alice_sk);
+    let alice_pk = DHEC::<Fp97, 4>::compute_public_key(&ecdh_fp_params, &alice_sk);
     println!("Alice generates:");
-    println!("  Private key: {:?}", alice_sk);
+    println!("  Private key: 2");
     println!("  Public key:  {:?}", alice_pk);
 
     // Bob's keys
-    let bob_sk = DHEC::<Fp101, 4>::generate_private_key(&ecdh_fp_params, &bob_random);
-    let bob_pk = DHEC::<Fp101, 4>::compute_public_key(&ecdh_fp_params, &bob_sk);
+    let bob_pk = DHEC::<Fp97, 4>::compute_public_key(&ecdh_fp_params, &bob_sk);
     println!("\nBob generates:");
-    println!("  Private key: {:?}", bob_sk);
+    println!("  Private key: 3");
     println!("  Public key:  {:?}", bob_pk);
 
     // Shared secrets
-    let alice_shared = DHEC::<Fp101, 4>::compute_shared_secret(&ecdh_fp_params, &alice_sk, &bob_pk);
-    let bob_shared = DHEC::<Fp101, 4>::compute_shared_secret(&ecdh_fp_params, &bob_sk, &alice_pk);
+    let alice_shared = DHEC::<Fp97, 4>::compute_shared_secret(&ecdh_fp_params, &alice_sk, &bob_pk);
+    let bob_shared = DHEC::<Fp97, 4>::compute_shared_secret(&ecdh_fp_params, &bob_sk, &alice_pk);
 
     println!("\nAlice computes shared secret: {:?}", alice_shared);
     println!("Bob computes shared secret:   {:?}", bob_shared);
+
+    if alice_shared == bob_shared {
+        println!("\n✓ SUCCESS: Both parties computed the same shared secret!");
+    } else {
+        println!("\n✗ FAILURE: Shared secrets do not match!");
+    }
+
+    // ========================================================================
+    // Example 5: ECDH over binary field F_2^4 (GF16)
+    // ========================================================================
+
+    println!("\n\n");
+    println!("┌────────────────────────────────────────────────────────────────────────────┐");
+    println!("│ Example 5: Elliptic Curve DH over Binary Field F_2^4                      │");
+    println!("└────────────────────────────────────────────────────────────────────────────┘");
+
+    // Binary curve: y² + xy = x³ + ax² + b over GF(2^4)
+    // Using a=0, b=1: y² + xy = x³ + 1
+    let bin_a = GF16::from_u64(0);
+    let bin_b = GF16::from_u64(1);
+    let binary_curve = BinaryEllipticCurve::new(bin_a, bin_b);
+
+    // Find a valid generator point
+    let mut bin_generator = None;
+    for x_val in 1..16u64 {
+        for y_val in 0..16u64 {
+            let pt = Point::Affine {
+                x: GF16::from_u64(x_val),
+                y: GF16::from_u64(y_val),
+            };
+            if binary_curve.is_on_curve(&pt) {
+                // Verify this isn't a low-order point by checking [2]P ≠ ∞
+                let doubled = binary_curve.double(&pt);
+                if !matches!(doubled, Point::Infinity) {
+                    bin_generator = Some(pt);
+                    break;
+                }
+            }
+        }
+        if bin_generator.is_some() {
+            break;
+        }
+    }
+    let bin_gen = bin_generator.expect("No generator point found");
+
+    // Find the order of the generator by iterating until we hit infinity
+    let mut order = 1u64;
+    let mut current = bin_gen.clone();
+    while !matches!(current, Point::Infinity) && order < 100 {
+        current = binary_curve.add(&current, &bin_gen);
+        order += 1;
+    }
+
+    let ecdh_binary_params = DHParamsBinaryEC {
+        field_description: "F_2^4 (GF16)".to_string(),
+        curve: binary_curve,
+        generator: bin_gen.clone(),
+        q: BigInt::from_u64(order),
+    };
+
+    println!("\nDomain Parameters:");
+    println!("  Field:       {}", ecdh_binary_params.field_description);
+    println!("  Curve:       y² + xy = x³ + ax² + b (a=0, b=1)");
+    println!("  Generator G: {:?}", ecdh_binary_params.generator);
+    println!("  Order q:     {:?}", ecdh_binary_params.q);
+
+    // Use small private keys (< order)
+    let bin_alice_random = BigInt::from_u64(2);
+    let bin_bob_random = BigInt::from_u64(3);
+
+    println!("\nECDH Key Exchange (Binary Curve over GF16)");
+    println!("{}", "=".repeat(80));
+
+    // Alice's keys
+    let bin_alice_sk = DHBinaryEC::<GF16, 4>::generate_private_key(&ecdh_binary_params, &bin_alice_random);
+    let bin_alice_pk = DHBinaryEC::<GF16, 4>::compute_public_key(&ecdh_binary_params, &bin_alice_sk);
+    println!("Alice generates:");
+    println!("  Private key: {:?}", bin_alice_sk);
+    println!("  Public key:  {:?}", bin_alice_pk);
+
+    // Bob's keys
+    let bin_bob_sk = DHBinaryEC::<GF16, 4>::generate_private_key(&ecdh_binary_params, &bin_bob_random);
+    let bin_bob_pk = DHBinaryEC::<GF16, 4>::compute_public_key(&ecdh_binary_params, &bin_bob_sk);
+    println!("\nBob generates:");
+    println!("  Private key: {:?}", bin_bob_sk);
+    println!("  Public key:  {:?}", bin_bob_pk);
+
+    // Shared secrets
+    let bin_alice_shared = DHBinaryEC::<GF16, 4>::compute_shared_secret(&ecdh_binary_params, &bin_alice_sk, &bin_bob_pk);
+    let bin_bob_shared = DHBinaryEC::<GF16, 4>::compute_shared_secret(&ecdh_binary_params, &bin_bob_sk, &bin_alice_pk);
+
+    println!("\nAlice computes shared secret: {:?}", bin_alice_shared);
+    println!("Bob computes shared secret:   {:?}", bin_bob_shared);
+
+    if bin_alice_shared == bin_bob_shared {
+        println!("\n✓ SUCCESS: Both parties computed the same shared secret!");
+    } else {
+        println!("\n✗ FAILURE: Shared secrets do not match!");
+    }
+
+    // Validate that both shared secrets are on the curve
+    println!("\nPublic Key Validation:");
+    match validate_binary_ec_public_key(&ecdh_binary_params, &bin_alice_pk) {
+        Ok(()) => println!("  Alice's public key: ✓ Valid (on curve, not infinity)"),
+        Err(e) => println!("  Alice's public key: ✗ Invalid ({:?})", e),
+    }
+    match validate_binary_ec_public_key(&ecdh_binary_params, &bin_bob_pk) {
+        Ok(()) => println!("  Bob's public key:   ✓ Valid (on curve, not infinity)"),
+        Err(e) => println!("  Bob's public key:   ✗ Invalid ({:?})", e),
+    }
 
     // ========================================================================
     // Summary
@@ -329,6 +444,6 @@ fn main() {
     println!("  ✓ Classic prime field F_p");
     println!("  ✓ Binary field F_2^k");
     println!("  ✓ Extension field F_p^k");
-    println!("  ✓ Elliptic curves over F_p");
-    println!("  ✓ Elliptic curves over F_p^k");
+    println!("  ✓ Elliptic curves over F_p (ECDH)");
+    println!("  ✓ Elliptic curves over F_2^k (Binary ECDH)");
 }
