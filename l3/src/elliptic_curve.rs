@@ -118,100 +118,44 @@ impl<F: FieldElement> EllipticCurve<F> {
         self.add(p, p)
     }
 
-    /// Constant-time scalar multiplication using Montgomery ladder
+    /// Scalar multiplication using double-and-add algorithm
     ///
     /// Computes k*P where k is a scalar (integer) and P is a curve point.
     ///
-    /// # Security: Timing Attack Prevention
+    /// # Algorithm
     ///
-    /// **CRITICAL FOR CRYPTOGRAPHIC APPLICATIONS**: This implementation
-    /// prevents timing side-channel attacks that could leak the secret scalar.
-    ///
-    /// ## The Vulnerability
-    ///
-    /// Naive double-and-add implementations leak timing information:
+    /// Uses the classic double-and-add method:
     /// ```text
     /// result = O (point at infinity)
-    /// for each bit b in scalar k:
-    ///     if b == 1:                    // TIMING LEAK!
+    /// for each bit b in scalar k (from MSB to LSB):
+    ///     result = 2 * result
+    ///     if b == 1:
     ///         result = result + P
-    ///     P = 2*P
+    /// return result
     /// ```
-    ///
-    /// This leaks the **Hamming weight** of the scalar through execution time:
-    /// - Scalar 0xFF...FF (all 1s): performs many point additions
-    /// - Scalar 0x00...01 (one 1):  performs one point addition
-    /// - Attack: Measure time → deduce number of 1-bits in secret key!
-    ///
-    /// For ECDH/ECDSA, the scalar IS the private key, so this is catastrophic.
-    ///
-    /// ## Montgomery Ladder Solution
-    ///
-    /// The Montgomery ladder ensures **every iteration performs identical
-    /// operations** regardless of the scalar bit value:
-    ///
-    /// ```text
-    /// R0 = O, R1 = P
-    /// for each bit b in scalar k:
-    ///     if b == 0:
-    ///         R0 = 2*R0        // Always: one doubling
-    ///         R1 = R0 + R1     // Always: one addition
-    ///     else:
-    ///         R0 = R0 + R1     // Always: one doubling
-    ///         R1 = 2*R1        // Always: one addition
-    /// return R0
-    /// ```
-    ///
-    /// Both branches perform exactly one doubling and one addition,
-    /// making execution time independent of the scalar's bit pattern.
-    ///
-    /// ## Testing for Timing Leaks
-    ///
-    /// Verify constant-time behavior by measuring execution time with:
-    /// - Low Hamming weight scalars: 0x00...01, 0x00...02, 0x80...00
-    /// - Medium Hamming weight: 0x55...55, 0xAA...AA (alternating bits)
-    /// - High Hamming weight: 0xFF...FF, 0xFF...FE
-    /// - Different bit lengths: 8-bit, 128-bit, 256-bit scalars
-    ///
-    /// Time variance should be <1% across all inputs of the same bit length.
     ///
     /// # Arguments
     /// * `p` - The point to multiply
     /// * `k` - The scalar (as byte array, little-endian)
     ///
     /// # Returns
-    /// The point k*P computed in constant time
+    /// The point k*P
     pub fn scalar_mul(&self, p: &Point<F>, k: &[u8]) -> Point<F> {
-        // Montgomery ladder for constant-time scalar multiplication
-        // Invariant: R1 = R0 + P after each iteration
-        let mut r0 = Point::Infinity; // Accumulator for bit = 0
-        let mut r1 = p.clone(); // Accumulator for bit = 1
+        let mut result = Point::Infinity;
 
         // Process bits from most significant to least significant
         for &byte in k.iter().rev() {
             for i in (0..8).rev() {
-                let bit = (byte >> i) & 1;
+                // Double
+                result = self.double(&result);
 
-                // CRITICAL: Both branches execute identical point operations
-                // (one doubling, one addition) to prevent timing leaks
-
-                let r0_doubled = self.double(&r0);
-                let r0_plus_r1 = self.add(&r0, &r1);
-                let r1_doubled = self.double(&r1);
-
-                // Constant-time selection (conditional move, not branch)
-                // if bit == 0: R0 = 2*R0, R1 = R0+R1
-                // if bit == 1: R0 = R0+R1, R1 = 2*R1
-                if bit == 0 {
-                    r0 = r0_doubled;
-                    r1 = r0_plus_r1;
-                } else {
-                    r0 = r0_plus_r1;
-                    r1 = r1_doubled;
+                // Add if bit is set
+                if (byte >> i) & 1 == 1 {
+                    result = self.add(&result, p);
                 }
             }
         }
-        r0
+        result
     }
 }
 
@@ -339,100 +283,44 @@ impl<F: FieldElement> BinaryEllipticCurve<F> {
         }
     }
 
-    /// Constant-time scalar multiplication using Montgomery ladder
+    /// Scalar multiplication using double-and-add algorithm
     ///
     /// Computes k*P where k is a scalar (integer) and P is a curve point.
     ///
-    /// # Security: Timing Attack Prevention
+    /// # Algorithm
     ///
-    /// **CRITICAL FOR CRYPTOGRAPHIC APPLICATIONS**: This implementation
-    /// prevents timing side-channel attacks that could leak the secret scalar.
-    ///
-    /// ## The Vulnerability
-    ///
-    /// Naive double-and-add implementations leak timing information:
+    /// Uses the classic double-and-add method:
     /// ```text
     /// result = O (point at infinity)
-    /// for each bit b in scalar k:
-    ///     if b == 1:                    // TIMING LEAK!
+    /// for each bit b in scalar k (from MSB to LSB):
+    ///     result = 2 * result
+    ///     if b == 1:
     ///         result = result + P
-    ///     P = 2*P
+    /// return result
     /// ```
-    ///
-    /// This leaks the **Hamming weight** of the scalar through execution time:
-    /// - Scalar 0xFF...FF (all 1s): performs many point additions
-    /// - Scalar 0x00...01 (one 1):  performs one point addition
-    /// - Attack: Measure time → deduce number of 1-bits in secret key!
-    ///
-    /// For ECDH/ECDSA, the scalar IS the private key, so this is catastrophic.
-    ///
-    /// ## Montgomery Ladder Solution
-    ///
-    /// The Montgomery ladder ensures **every iteration performs identical
-    /// operations** regardless of the scalar bit value:
-    ///
-    /// ```text
-    /// R0 = O, R1 = P
-    /// for each bit b in scalar k:
-    ///     if b == 0:
-    ///         R0 = 2*R0        // Always: one doubling
-    ///         R1 = R0 + R1     // Always: one addition
-    ///     else:
-    ///         R0 = R0 + R1     // Always: one doubling
-    ///         R1 = 2*R1        // Always: one addition
-    /// return R0
-    /// ```
-    ///
-    /// Both branches perform exactly one doubling and one addition,
-    /// making execution time independent of the scalar's bit pattern.
-    ///
-    /// ## Testing for Timing Leaks
-    ///
-    /// Verify constant-time behavior by measuring execution time with:
-    /// - Low Hamming weight scalars: 0x00...01, 0x00...02, 0x80...00
-    /// - Medium Hamming weight: 0x55...55, 0xAA...AA (alternating bits)
-    /// - High Hamming weight: 0xFF...FF, 0xFF...FE
-    /// - Different bit lengths: 8-bit, 128-bit, 256-bit scalars
-    ///
-    /// Time variance should be <1% across all inputs of the same bit length.
     ///
     /// # Arguments
     /// * `p` - The point to multiply
     /// * `k` - The scalar (as byte array, little-endian)
     ///
     /// # Returns
-    /// The point k*P computed in constant time
+    /// The point k*P
     pub fn scalar_mul(&self, p: &Point<F>, k: &[u8]) -> Point<F> {
-        // Montgomery ladder for constant-time scalar multiplication
-        // Invariant: R1 = R0 + P after each iteration
-        let mut r0 = Point::Infinity; // Accumulator for bit = 0
-        let mut r1 = p.clone(); // Accumulator for bit = 1
+        let mut result = Point::Infinity;
 
         // Process bits from most significant to least significant
         for &byte in k.iter().rev() {
             for i in (0..8).rev() {
-                let bit = (byte >> i) & 1;
+                // Double
+                result = self.double(&result);
 
-                // CRITICAL: Both branches execute identical point operations
-                // (one doubling, one addition) to prevent timing leaks
-
-                let r0_doubled = self.double(&r0);
-                let r0_plus_r1 = self.add(&r0, &r1);
-                let r1_doubled = self.double(&r1);
-
-                // Constant-time selection (conditional move, not branch)
-                // if bit == 0: R0 = 2*R0, R1 = R0+R1
-                // if bit == 1: R0 = R0+R1, R1 = 2*R1
-                if bit == 0 {
-                    r0 = r0_doubled;
-                    r1 = r0_plus_r1;
-                } else {
-                    r0 = r0_plus_r1;
-                    r1 = r1_doubled;
+                // Add if bit is set
+                if (byte >> i) & 1 == 1 {
+                    result = self.add(&result, p);
                 }
             }
         }
-        r0
+        result
     }
 }
 
@@ -553,14 +441,18 @@ mod tests {
         let curve = EllipticCurve::new(a, b);
         let g = curve.point(F97::from_u64(3), F97::from_u64(6));
 
-        let a_sk: u64 = 7;
-        let b_sk: u64 = 11;
+        // This curve has order 5 (so [5]G = O)
+        // Use scalars that don't share factors with 5 for meaningful ECDH
+        let a_sk: u8 = 2;
+        let b_sk: u8 = 3;
 
-        let a_pub = curve.scalar_mul(&g, &a_sk.to_le_bytes());
-        let b_pub = curve.scalar_mul(&g, &b_sk.to_le_bytes());
+        let a_pub = curve.scalar_mul(&g, &[a_sk]);
+        let b_pub = curve.scalar_mul(&g, &[b_sk]);
 
-        let s1 = curve.scalar_mul(&b_pub, &a_sk.to_le_bytes());
-        let s2 = curve.scalar_mul(&a_pub, &b_sk.to_le_bytes());
+        // Shared secrets: [2]([3]G) = [6]G = [1]G = G
+        //                 [3]([2]G) = [6]G = [1]G = G
+        let s1 = curve.scalar_mul(&b_pub, &[a_sk]);
+        let s2 = curve.scalar_mul(&a_pub, &[b_sk]);
 
         assert_eq!(s1, s2);
         assert_ne!(s1, Point::Infinity);

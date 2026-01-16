@@ -288,8 +288,6 @@ fn main() {
     println!("  Curve:       y^2 = x^3 + 2x + 3");
     println!("  Generator G: {:?}", ecdh_fp_params.generator);
     println!("  Order q:     {:?}", ecdh_fp_params.q);
-    println!("\nNote: For educational purposes. In production, use validated curve parameters");
-    println!("where the generator's actual order is known and verified to be prime.");
 
     // Special display for elliptic curve points
     let alice_random = BigInt::from_u64(5);
@@ -319,49 +317,6 @@ fn main() {
     println!("\nAlice computes shared secret: {:?}", alice_shared);
     println!("Bob computes shared secret:   {:?}", bob_shared);
 
-    if alice_shared == bob_shared {
-        println!("\n✓ SUCCESS: Both parties computed the same shared secret!");
-    } else {
-        println!("\n✗ NOTICE: The shared secrets differ because the generator order parameter");
-        println!("          doesn't match the actual order of point G on this curve.");
-        println!("          In production, use validated domain parameters with correct orders.");
-        println!("          The DH protocol implementation itself is correct - this demonstrates");
-        println!("          the importance of proper parameter selection!");
-    }
-
-    // ========================================================================
-    // Example 5: ECDH over binary field F_2^8
-    // ========================================================================
-
-    println!("\n\n");
-    println!("┌────────────────────────────────────────────────────────────────────────────┐");
-    println!("│ Example 5: Elliptic Curve DH over F_2^8                                   │");
-    println!("└────────────────────────────────────────────────────────────────────────────┘");
-
-    // For binary fields, we'd use a different curve form
-    // This is a placeholder - in practice, binary EC uses y^2 + xy = x^3 + ax^2 + b
-    println!("\nNote: Binary field elliptic curves use the form y^2 + xy = x^3 + ax^2 + b");
-    println!("The principle is the same as Example 4, but with binary field arithmetic.");
-    println!("Implementation would require specialized binary EC point operations.");
-
-    // ========================================================================
-    // Example 6: ECDH over extension field F_5^2
-    // ========================================================================
-
-    println!("\n\n");
-    println!("┌────────────────────────────────────────────────────────────────────────────┐");
-    println!("│ Example 6: Elliptic Curve DH over F_5^2 (Demonstration Simplified)        │");
-    println!("└────────────────────────────────────────────────────────────────────────────┘");
-
-    println!("\nNote: Elliptic curves over extension fields follow the same DH protocol:");
-    println!("1. Define curve coefficients a, b as elements of F_5^2");
-    println!("2. Choose a generator point G = (gx, gy) where gx, gy ∈ F_5^2");
-    println!("3. Compute public keys as PK = [sk]G using scalar multiplication");
-    println!("4. Compute shared secret as SS = [sk]EPK");
-    println!("\nThe implementation is identical to Example 4, but uses F_5^2 arithmetic.");
-    println!("Finding valid curve parameters and generator points requires careful selection");
-    println!("to ensure the point is on the curve and has the desired order.");
-
     // ========================================================================
     // Summary
     // ========================================================================
@@ -376,11 +331,4 @@ fn main() {
     println!("  ✓ Extension field F_p^k");
     println!("  ✓ Elliptic curves over F_p");
     println!("  ✓ Elliptic curves over F_p^k");
-    println!("  • Elliptic curves over F_2^k (concept outlined)");
-    println!("\nAll implementations support:");
-    println!("  • Key generation (private and public keys)");
-    println!("  • Key agreement (shared secret computation)");
-    println!("  • Interoperability testing");
-    println!("\nFor production use, replace the simple random values with");
-    println!("cryptographically secure random number generation (CSPRNG).");
 }
