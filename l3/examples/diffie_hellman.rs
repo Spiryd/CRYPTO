@@ -119,11 +119,11 @@ type Fp101 = PrimeField<F101, 4>;
 // Helper function to simulate a two-party key exchange
 // ============================================================================
 
-fn demonstrate_key_exchange<DH: DiffieHellman>(
+fn demonstrate_key_exchange<const N: usize, DH: DiffieHellman<N>>(
     params: &DH::Params,
     description: &str,
-    alice_random: u64,
-    bob_random: u64,
+    alice_random: &BigInt<N>,
+    bob_random: &BigInt<N>,
 ) {
     println!("\n{}", "=".repeat(80));
     println!("{}", description);
@@ -176,19 +176,19 @@ fn main() {
     let dh_fp_params = DHParamsFp {
         p_description: "97 (prime)".to_string(),
         g: Fp97::from_u64(5), // generator
-        q: 48,                // order of subgroup (divisor of 96 = 97-1)
+        q: BigInt::from_u64(48), // order of subgroup (divisor of 96 = 97-1)
     };
 
     println!("\nDomain Parameters:");
     println!("  Prime p:     {}", dh_fp_params.p_description);
     println!("  Generator g: {:?}", dh_fp_params.g);
-    println!("  Order q:     {}", dh_fp_params.q);
+    println!("  Order q:     {:?}", dh_fp_params.q);
 
-    demonstrate_key_exchange::<DHFp<Fp97>>(
+    demonstrate_key_exchange::<4, DHFp<Fp97, 4>>(
         &dh_fp_params,
         "DH Key Exchange (F_97)",
-        12345, // Alice's randomness
-        67890, // Bob's randomness
+        &BigInt::from_u64(12345), // Alice's randomness
+        &BigInt::from_u64(67890), // Bob's randomness
     );
 
     // ========================================================================
@@ -204,16 +204,21 @@ fn main() {
         k: 8,
         m_description: "x^8 + x^4 + x^3 + x + 1 (AES polynomial)".to_string(),
         g: F2k8::from_u64(0x03), // generator (polynomial x + 1)
-        q: 255,                  // order of subgroup (divides 2^8 - 1 = 255)
+        q: BigInt::from_u64(255), // order of subgroup (divides 2^8 - 1 = 255)
     };
 
     println!("\nDomain Parameters:");
     println!("  Field:          F_2^{}", dh_f2k_params.k);
     println!("  Irreducible m:  {}", dh_f2k_params.m_description);
     println!("  Generator g:    {:?}", dh_f2k_params.g);
-    println!("  Order q:        {}", dh_f2k_params.q);
+    println!("  Order q:        {:?}", dh_f2k_params.q);
 
-    demonstrate_key_exchange::<DHF2k<F2k8>>(&dh_f2k_params, "DH Key Exchange (F_2^8)", 111, 222);
+    demonstrate_key_exchange::<4, DHF2k<F2k8, 4>>(
+        &dh_f2k_params,
+        "DH Key Exchange (F_2^8)",
+        &BigInt::from_u64(111),
+        &BigInt::from_u64(222),
+    );
 
     // ========================================================================
     // Example 3: DH over extension field F_5^2
@@ -233,7 +238,7 @@ fn main() {
         k: 2,
         m_description: "x^2 + 2 over F_5".to_string(),
         g: g_fpk,
-        q: 24, // order of subgroup (divides 5^2 - 1 = 24)
+        q: BigInt::from_u64(24), // order of subgroup (divides 5^2 - 1 = 24)
     };
 
     println!("\nDomain Parameters:");
@@ -241,9 +246,14 @@ fn main() {
     println!("  Extension k:    {}", dh_fpk_params.k);
     println!("  Irreducible m:  {}", dh_fpk_params.m_description);
     println!("  Generator g:    {:?}", dh_fpk_params.g);
-    println!("  Order q:        {}", dh_fpk_params.q);
+    println!("  Order q:        {:?}", dh_fpk_params.q);
 
-    demonstrate_key_exchange::<DHFpk<F52>>(&dh_fpk_params, "DH Key Exchange (F_5^2)", 333, 444);
+    demonstrate_key_exchange::<4, DHFpk<F52, 4>>(
+        &dh_fpk_params,
+        "DH Key Exchange (F_5^2)",
+        &BigInt::from_u64(333),
+        &BigInt::from_u64(444),
+    );
 
     // ========================================================================
     // Example 4: ECDH over prime field F_101
@@ -270,41 +280,41 @@ fn main() {
         field_description: "F_101".to_string(),
         curve,
         generator,
-        q: 17, // Using small order for demo purposes
+        q: BigInt::from_u64(17), // Using small order for demo purposes
     };
 
     println!("\nDomain Parameters:");
     println!("  Field:       {}", ecdh_fp_params.field_description);
     println!("  Curve:       y^2 = x^3 + 2x + 3");
     println!("  Generator G: {:?}", ecdh_fp_params.generator);
-    println!("  Order q:     {}", ecdh_fp_params.q);
+    println!("  Order q:     {:?}", ecdh_fp_params.q);
     println!("\nNote: For educational purposes. In production, use validated curve parameters");
     println!("where the generator's actual order is known and verified to be prime.");
 
     // Special display for elliptic curve points
-    let alice_random = 5;
-    let bob_random = 7;
+    let alice_random = BigInt::from_u64(5);
+    let bob_random = BigInt::from_u64(7);
 
     println!("\nECDH Key Exchange (F_101)");
     println!("{}", "=".repeat(80));
 
     // Alice's keys
-    let alice_sk = DHEC::<Fp101>::generate_private_key(&ecdh_fp_params, alice_random);
-    let alice_pk = DHEC::<Fp101>::compute_public_key(&ecdh_fp_params, &alice_sk);
+    let alice_sk = DHEC::<Fp101, 4>::generate_private_key(&ecdh_fp_params, &alice_random);
+    let alice_pk = DHEC::<Fp101, 4>::compute_public_key(&ecdh_fp_params, &alice_sk);
     println!("Alice generates:");
-    println!("  Private key: {}", alice_sk);
+    println!("  Private key: {:?}", alice_sk);
     println!("  Public key:  {:?}", alice_pk);
 
     // Bob's keys
-    let bob_sk = DHEC::<Fp101>::generate_private_key(&ecdh_fp_params, bob_random);
-    let bob_pk = DHEC::<Fp101>::compute_public_key(&ecdh_fp_params, &bob_sk);
+    let bob_sk = DHEC::<Fp101, 4>::generate_private_key(&ecdh_fp_params, &bob_random);
+    let bob_pk = DHEC::<Fp101, 4>::compute_public_key(&ecdh_fp_params, &bob_sk);
     println!("\nBob generates:");
-    println!("  Private key: {}", bob_sk);
+    println!("  Private key: {:?}", bob_sk);
     println!("  Public key:  {:?}", bob_pk);
 
     // Shared secrets
-    let alice_shared = DHEC::<Fp101>::compute_shared_secret(&ecdh_fp_params, &alice_sk, &bob_pk);
-    let bob_shared = DHEC::<Fp101>::compute_shared_secret(&ecdh_fp_params, &bob_sk, &alice_pk);
+    let alice_shared = DHEC::<Fp101, 4>::compute_shared_secret(&ecdh_fp_params, &alice_sk, &bob_pk);
+    let bob_shared = DHEC::<Fp101, 4>::compute_shared_secret(&ecdh_fp_params, &bob_sk, &alice_pk);
 
     println!("\nAlice computes shared secret: {:?}", alice_shared);
     println!("Bob computes shared secret:   {:?}", bob_shared);

@@ -357,12 +357,10 @@ impl<F: FieldElement + SchnorrEncodable + Clone + Debug, const N: usize> Schnorr
         message: &[u8],
         signature: &SchnorrSignature,
     ) -> bool {
-        // 0. Validate signature format
+        // 0. Sanity checks
         if validate_signature(signature, &params.order).is_err() {
             return false;
         }
-
-        // 0b. Reject point at infinity as public key
         if matches!(public_key, Point::Infinity) {
             return false;
         }
