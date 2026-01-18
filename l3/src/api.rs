@@ -1001,7 +1001,6 @@ impl ChallengeTestRunner {
     pub fn test_f2m_dh(&self) -> Result<(), ApiError> {
         let params = self.client.get_f2m_params()?;
         
-        let order = BigInt::<BIGINT_LIMBS>::from_hex(&params.order);
         let generator = BigInt::<BIGINT_LIMBS>::from_hex(&params.generator);
         let modulus = BigInt::<BIGINT_LIMBS>::from_hex(&params.modulus);
         let m = params.extension;
@@ -1104,34 +1103,120 @@ impl ChallengeTestRunner {
     // ========================================================================
 
     /// Extension field multiplication: multiply two polynomials mod the irreducible polynomial
-    fn fpk_mul(a: &[BigInt<BIGINT_LIMBS>], b: &[BigInt<BIGINT_LIMBS>], modulus_poly: &[BigInt<BIGINT_LIMBS>], prime: &BigInt<BIGINT_LIMBS>) -> Vec<BigInt<BIGINT_LIMBS>> {
+    /// Naive polynomial multiplication O(n²) - fallback
+    fn fpk_mul_naive(a: &[BigInt<BIGINT_LIMBS>], b: &[BigInt<BIGINT_LIMBS>], prime: &BigInt<BIGINT_LIMBS>) -> Vec<BigInt<BIGINT_LIMBS>> {
         let k = a.len();
-        
-        // Multiply polynomials
         let mut product = vec![BigInt::<BIGINT_LIMBS>::zero(); 2 * k - 1];
         for i in 0..k {
+            if a[i].is_zero() { continue; }
             for j in 0..k {
+                if b[j].is_zero() { continue; }
                 let term = a[i].mod_mul(&b[j], prime);
                 product[i + j] = product[i + j].mod_add(&term, prime);
             }
         }
+        product
+    }
+
+    /// Karatsuba polynomial multiplication O(n^1.585) - for k >= 3
+    fn fpk_mul_karatsuba(a: &[BigInt<BIGINT_LIMBS>], b: &[BigInt<BIGINT_LIMBS>], prime: &BigInt<BIGINT_LIMBS>) -> Vec<BigInt<BIGINT_LIMBS>> {
+        let k = a.len();
+        
+        // Base case: use naive for small inputs
+        if k <= 2 {
+            return Self::fpk_mul_naive(a, b, prime);
+        }
+        
+        let m = k.div_ceil(2);
+        
+        // Split: a = a_h * x^m + a_l,  b = b_h * x^m + b_l
+        let (a_l, a_h) = a.split_at(m);
+        let (b_l, b_h) = b.split_at(m);
+        
+        // Pad to same length
+        let mut a_h_padded = a_h.to_vec();
+        let mut b_h_padded = b_h.to_vec();
+        while a_h_padded.len() < m {
+            a_h_padded.push(BigInt::zero());
+        }
+        while b_h_padded.len() < m {
+            b_h_padded.push(BigInt::zero());
+        }
+        
+        // Three recursive multiplications
+        let z0 = Self::fpk_mul_karatsuba(a_l, b_l, prime);
+        let z2 = Self::fpk_mul_karatsuba(&a_h_padded, &b_h_padded, prime);
+        
+        // (a_l + a_h) * (b_l + b_h)
+        let mut a_sum = vec![BigInt::<BIGINT_LIMBS>::zero(); m];
+        let mut b_sum = vec![BigInt::<BIGINT_LIMBS>::zero(); m];
+        for i in 0..m {
+            a_sum[i] = a_l[i].mod_add(&a_h_padded[i], prime);
+            b_sum[i] = b_l[i].mod_add(&b_h_padded[i], prime);
+        }
+        let z1_raw = Self::fpk_mul_karatsuba(&a_sum, &b_sum, prime);
+        
+        // z1 = (a_l + a_h)(b_l + b_h) - z0 - z2
+        let mut z1 = vec![BigInt::<BIGINT_LIMBS>::zero(); z1_raw.len()];
+        for i in 0..z1_raw.len() {
+            z1[i] = z1_raw[i];
+            if i < z0.len() {
+                z1[i] = z1[i].mod_sub(&z0[i], prime);
+            }
+            if i < z2.len() {
+                z1[i] = z1[i].mod_sub(&z2[i], prime);
+            }
+        }
+        
+        // Combine: result = z2*x^(2m) + z1*x^m + z0
+        let mut result = vec![BigInt::<BIGINT_LIMBS>::zero(); 2 * k - 1];
+        
+        // Add z0
+        for i in 0..z0.len() {
+            result[i] = result[i].mod_add(&z0[i], prime);
+        }
+        
+        // Add z1 * x^m
+        for i in 0..z1.len() {
+            if i + m < result.len() {
+                result[i + m] = result[i + m].mod_add(&z1[i], prime);
+            }
+        }
+        
+        // Add z2 * x^(2m)
+        for i in 0..z2.len() {
+            if i + 2 * m < result.len() {
+                result[i + 2 * m] = result[i + 2 * m].mod_add(&z2[i], prime);
+            }
+        }
+        
+        result
+    }
+
+    fn fpk_mul(a: &[BigInt<BIGINT_LIMBS>], b: &[BigInt<BIGINT_LIMBS>], modulus_poly: &[BigInt<BIGINT_LIMBS>], prime: &BigInt<BIGINT_LIMBS>) -> Vec<BigInt<BIGINT_LIMBS>> {
+        let k = a.len();
+        
+        // Use Karatsuba for polynomial multiplication
+        let product = Self::fpk_mul_karatsuba(a, b, prime);
         
         // Reduce mod irreducible polynomial
         // modulus_poly represents x^k + c_{k-1}*x^{k-1} + ... + c_0
         // We reduce by replacing x^k with -(c_{k-1}*x^{k-1} + ... + c_0)
-        for i in (k..product.len()).rev() {
-            let coeff = product[i];
+        let mut result = product;
+        for i in (k..result.len()).rev() {
+            let coeff = result[i];
             if !coeff.is_zero() {
                 for j in 0..k {
                     let sub_term = coeff.mod_mul(&modulus_poly[j], prime);
-                    product[i - k + j] = product[i - k + j].mod_sub(&sub_term, prime);
+                    result[i - k + j] = result[i - k + j].mod_sub(&sub_term, prime);
                 }
-                product[i] = BigInt::zero();
+                result[i] = BigInt::zero();
             }
         }
         
-        product[0..k].to_vec()
+        result[0..k].to_vec()
     }
+
 
     /// Extension field exponentiation
     fn fpk_pow(base: &[BigInt<BIGINT_LIMBS>], exp: &BigInt<BIGINT_LIMBS>, modulus_poly: &[BigInt<BIGINT_LIMBS>], prime: &BigInt<BIGINT_LIMBS>) -> Vec<BigInt<BIGINT_LIMBS>> {
@@ -1165,7 +1250,6 @@ impl ChallengeTestRunner {
         let params = self.client.get_fpk_params()?;
         
         let prime = BigInt::<BIGINT_LIMBS>::from_hex(&params.prime_base);
-        let order = BigInt::<BIGINT_LIMBS>::from_hex(&params.order);
         let _k = params.extension;
         
         // Parse generator and modulus polynomial
@@ -1399,30 +1483,183 @@ impl ChallengeTestRunner {
         }
     }
 
-    /// EC scalar multiplication over prime field
+    // ========================================================================
+    // Jacobian Coordinates for Elliptic Curves (ECP)
+    // ========================================================================
+    // In Jacobian coordinates, a point (x,y) is represented as (X,Y,Z) where:
+    // x = X/Z², y = Y/Z³, and point at infinity has Z = 0
+    // This eliminates costly modular inversions during scalar multiplication
+    
+    /// Convert affine point to Jacobian coordinates
+    fn affine_to_jacobian(p: &(BigInt<BIGINT_LIMBS>, BigInt<BIGINT_LIMBS>)) -> (BigInt<BIGINT_LIMBS>, BigInt<BIGINT_LIMBS>, BigInt<BIGINT_LIMBS>) {
+        (p.0, p.1, BigInt::<BIGINT_LIMBS>::one())
+    }
+    
+    /// Convert Jacobian point back to affine coordinates
+    fn jacobian_to_affine(p: &(BigInt<BIGINT_LIMBS>, BigInt<BIGINT_LIMBS>, BigInt<BIGINT_LIMBS>), modulus: &BigInt<BIGINT_LIMBS>) -> Option<(BigInt<BIGINT_LIMBS>, BigInt<BIGINT_LIMBS>)> {
+        let (x, y, z) = p;
+        
+        if z.is_zero() {
+            return None; // Point at infinity
+        }
+        
+        // z_inv = 1/Z (mod p)
+        let z_inv = Self::mod_inverse(z, modulus)?;
+        
+        // z_inv² and z_inv³
+        let z_inv_sq = z_inv.mod_mul(&z_inv, modulus);
+        let z_inv_cu = z_inv_sq.mod_mul(&z_inv, modulus);
+        
+        // x = X * z_inv²
+        let affine_x = x.mod_mul(&z_inv_sq, modulus);
+        // y = Y * z_inv³
+        let affine_y = y.mod_mul(&z_inv_cu, modulus);
+        
+        Some((affine_x, affine_y))
+    }
+    
+    /// Jacobian point doubling: faster than addition when doubling same point
+    fn jacobian_double(p: &(BigInt<BIGINT_LIMBS>, BigInt<BIGINT_LIMBS>, BigInt<BIGINT_LIMBS>), a: &BigInt<BIGINT_LIMBS>, modulus: &BigInt<BIGINT_LIMBS>) -> Option<(BigInt<BIGINT_LIMBS>, BigInt<BIGINT_LIMBS>, BigInt<BIGINT_LIMBS>)> {
+        let (x, y, z) = p;
+        
+        if z.is_zero() {
+            return None; // Point at infinity
+        }
+        
+        if y.is_zero() {
+            return None; // Point at infinity
+        }
+        
+        let two = BigInt::<BIGINT_LIMBS>::from_u64(2);
+        let three = BigInt::<BIGINT_LIMBS>::from_u64(3);
+        let four = BigInt::<BIGINT_LIMBS>::from_u64(4);
+        let eight = BigInt::<BIGINT_LIMBS>::from_u64(8);
+        
+        // S = 4*X*Y²
+        let y_sq = y.mod_mul(y, modulus);
+        let four_x_y_sq = four.mod_mul(&x.mod_mul(&y_sq, modulus), modulus);
+        
+        // M = 3*X² + a*Z⁴
+        let x_sq = x.mod_mul(x, modulus);
+        let z_sq = z.mod_mul(z, modulus);
+        let z_fourth = z_sq.mod_mul(&z_sq, modulus);
+        let three_x_sq = three.mod_mul(&x_sq, modulus);
+        let m = three_x_sq.mod_add(&a.mod_mul(&z_fourth, modulus), modulus);
+        
+        // X' = M² - 2*S
+        let m_sq = m.mod_mul(&m, modulus);
+        let two_s = two.mod_mul(&four_x_y_sq, modulus);
+        let x_new = m_sq.mod_sub(&two_s, modulus);
+        
+        // Y' = M*(S - X') - 8*Y⁴
+        let y_fourth = y_sq.mod_mul(&y_sq, modulus);
+        let eight_y_fourth = eight.mod_mul(&y_fourth, modulus);
+        let y_new = m.mod_mul(&four_x_y_sq.mod_sub(&x_new, modulus), modulus).mod_sub(&eight_y_fourth, modulus);
+        
+        // Z' = 2*Y*Z
+        let z_new = two.mod_mul(&y.mod_mul(z, modulus), modulus);
+        
+        Some((x_new, y_new, z_new))
+    }
+    
+    /// Jacobian point addition: optimized for different points
+    fn jacobian_add(
+        p1: &(BigInt<BIGINT_LIMBS>, BigInt<BIGINT_LIMBS>, BigInt<BIGINT_LIMBS>),
+        p2: &(BigInt<BIGINT_LIMBS>, BigInt<BIGINT_LIMBS>, BigInt<BIGINT_LIMBS>),
+        a: &BigInt<BIGINT_LIMBS>,
+        modulus: &BigInt<BIGINT_LIMBS>,
+    ) -> Option<(BigInt<BIGINT_LIMBS>, BigInt<BIGINT_LIMBS>, BigInt<BIGINT_LIMBS>)> {
+        let (x1, y1, z1) = p1;
+        let (x2, y2, z2) = p2;
+        
+        // Handle point at infinity cases
+        if z1.is_zero() {
+            return Some(*p2);
+        }
+        if z2.is_zero() {
+            return Some(*p1);
+        }
+        
+        let two = BigInt::<BIGINT_LIMBS>::from_u64(2);
+        
+        // Z1Z1 = Z1²
+        let z1_sq = z1.mod_mul(z1, modulus);
+        // Z2Z2 = Z2²
+        let z2_sq = z2.mod_mul(z2, modulus);
+        
+        // U1 = X1*Z2Z2
+        let u1 = x1.mod_mul(&z2_sq, modulus);
+        // U2 = X2*Z1Z1
+        let u2 = x2.mod_mul(&z1_sq, modulus);
+        
+        // S1 = Y1*Z2*Z2Z2
+        let s1 = y1.mod_mul(&z2.mod_mul(&z2_sq, modulus), modulus);
+        // S2 = Y2*Z1*Z1Z1
+        let s2 = y2.mod_mul(&z1.mod_mul(&z1_sq, modulus), modulus);
+        
+        // H = U2-U1
+        let h = u2.mod_sub(&u1, modulus);
+        // R = S2-S1
+        let r = s2.mod_sub(&s1, modulus);
+        
+        // If H = 0
+        if h.is_zero() {
+            if r.is_zero() {
+                // Points are equal, use doubling
+                return Self::jacobian_double(p1, a, modulus);
+            } else {
+                // Points are negatives, return infinity
+                return None;
+            }
+        }
+        
+        // HH = H²
+        let hh = h.mod_mul(&h, modulus);
+        // HHH = H*HH
+        let hhh = h.mod_mul(&hh, modulus);
+        // V = U1*HH
+        let v = u1.mod_mul(&hh, modulus);
+        
+        // X3 = R² - HHH - 2*V
+        let r_sq = r.mod_mul(&r, modulus);
+        let two_v = two.mod_mul(&v, modulus);
+        let x3 = r_sq.mod_sub(&hhh, modulus).mod_sub(&two_v, modulus);
+        
+        // Y3 = R*(V - X3) - S1*HHH
+        let y3 = r.mod_mul(&v.mod_sub(&x3, modulus), modulus).mod_sub(&s1.mod_mul(&hhh, modulus), modulus);
+        
+        // Z3 = Z1*Z2*H
+        let z3 = z1.mod_mul(&z2.mod_mul(&h, modulus), modulus);
+        
+        Some((x3, y3, z3))
+    }
+
+    /// EC scalar multiplication over prime field using Jacobian coordinates (no inversions until end)
     fn ecp_scalar_mul(p: &(BigInt<BIGINT_LIMBS>, BigInt<BIGINT_LIMBS>), k: &BigInt<BIGINT_LIMBS>, a: &BigInt<BIGINT_LIMBS>, modulus: &BigInt<BIGINT_LIMBS>) -> Option<(BigInt<BIGINT_LIMBS>, BigInt<BIGINT_LIMBS>)> {
         if k.is_zero() {
             return None; // Point at infinity
         }
         
-        let mut result: Option<(BigInt<BIGINT_LIMBS>, BigInt<BIGINT_LIMBS>)> = None;
-        let mut base = *p;
+        // Convert to Jacobian coordinates
+        let mut result: Option<(BigInt<BIGINT_LIMBS>, BigInt<BIGINT_LIMBS>, BigInt<BIGINT_LIMBS>)> = None;
+        let mut base = Self::affine_to_jacobian(p);
         let mut k = *k;
         
         while !k.is_zero() {
             if k.limbs()[0] & 1 == 1 {
                 result = match result {
                     None => Some(base),
-                    Some(r) => Self::ecp_add(&r, &base, a, modulus),
+                    Some(r) => Self::jacobian_add(&r, &base, a, modulus),
                 };
             }
             k = k >> 1;
             if !k.is_zero() {
-                base = Self::ecp_add(&base, &base, a, modulus).unwrap_or((BigInt::zero(), BigInt::zero()));
+                base = Self::jacobian_double(&base, a, modulus)?;
             }
         }
         
-        result
+        // Convert back to affine coordinates
+        result.and_then(|p| Self::jacobian_to_affine(&p, modulus))
     }
 
     /// Test ECP DH exchange
@@ -1712,7 +1949,6 @@ impl ChallengeTestRunner {
         
         let m = params.extension;
         let red_poly = BigInt::<BIGINT_LIMBS>::from_hex(&params.modulus);
-        let order = BigInt::<BIGINT_LIMBS>::from_hex(&params.order);
         let a = BigInt::<BIGINT_LIMBS>::from_hex(&params.a);
         let gx = BigInt::<BIGINT_LIMBS>::from_hex(&params.generator.x);
         let gy = BigInt::<BIGINT_LIMBS>::from_hex(&params.generator.y);
@@ -1995,7 +2231,7 @@ impl ChallengeTestRunner {
         Self::fpk_mul(a, b, modulus_poly, prime)
     }
 
-    /// EC scalar multiplication over extension field
+    /// EC scalar multiplication over extension field with optimized cloning
     fn ecpk_scalar_mul(p: &(Vec<BigInt<BIGINT_LIMBS>>, Vec<BigInt<BIGINT_LIMBS>>), k_scalar: &BigInt<BIGINT_LIMBS>, a: &[BigInt<BIGINT_LIMBS>], modulus_poly: &[BigInt<BIGINT_LIMBS>], prime: &BigInt<BIGINT_LIMBS>) -> Option<(Vec<BigInt<BIGINT_LIMBS>>, Vec<BigInt<BIGINT_LIMBS>>)> {
         if k_scalar.is_zero() {
             return None;
@@ -2023,60 +2259,11 @@ impl ChallengeTestRunner {
         result
     }
 
-    /// EC scalar multiplication over extension field using NAF for optimization
-    fn ecpk_scalar_mul_naf(p: &(Vec<BigInt<BIGINT_LIMBS>>, Vec<BigInt<BIGINT_LIMBS>>), k_scalar: &BigInt<BIGINT_LIMBS>, a: &[BigInt<BIGINT_LIMBS>], modulus_poly: &[BigInt<BIGINT_LIMBS>], prime: &BigInt<BIGINT_LIMBS>) -> Option<(Vec<BigInt<BIGINT_LIMBS>>, Vec<BigInt<BIGINT_LIMBS>>)> {
-        if k_scalar.is_zero() {
-            return None;
-        }
-        
-        let ext_k = p.0.len();
-        
-        // Compute NAF representation
-        let naf = bigint_to_naf(k_scalar);
-        
-        // Compute -P for subtraction operations
-        let neg_p = (
-            p.0.iter().map(|c| prime.mod_sub(c, prime)).collect::<Vec<_>>(),
-            p.1.iter().map(|c| prime.mod_sub(c, prime)).collect::<Vec<_>>()
-        );
-        
-        // Process NAF from most significant to least significant
-        let mut result: Option<(Vec<BigInt<BIGINT_LIMBS>>, Vec<BigInt<BIGINT_LIMBS>>)> = None;
-        
-        for digit in naf.iter().rev() {
-            // Double
-            if let Some(r) = result {
-                result = Some(Self::ecpk_add(&r, &r, a, modulus_poly, prime)
-                    .unwrap_or((vec![BigInt::zero(); ext_k], vec![BigInt::zero(); ext_k])));
-            }
-            
-            // Add/Subtract
-            match digit {
-                1 => {
-                    result = match result {
-                        None => Some(p.clone()),
-                        Some(r) => Self::ecpk_add(&r, p, a, modulus_poly, prime),
-                    };
-                }
-                -1 => {
-                    result = match result {
-                        None => Some(neg_p.clone()),
-                        Some(r) => Self::ecpk_add(&r, &neg_p, a, modulus_poly, prime),
-                    };
-                }
-                _ => {} // digit == 0, do nothing
-            }
-        }
-        
-        result
-    }
-
     /// Test ECPk DH exchange
     pub fn test_ecpk_dh(&self) -> Result<(), ApiError> {
         let params = self.client.get_ecpk_params()?;
         
         let prime = BigInt::<BIGINT_LIMBS>::from_hex(&params.prime_base);
-        let order = BigInt::<BIGINT_LIMBS>::from_hex(&params.order);
         let _k = params.extension;
         
         let modulus_poly: Vec<BigInt<BIGINT_LIMBS>> = params.modulus.iter().map(|s| BigInt::from_hex(s)).collect();
@@ -2159,7 +2346,7 @@ impl ChallengeTestRunner {
         let e_bytes = hex_to_bytes(&sig.e);
         let e_scalar = hash_to_scalar(&e_bytes, &order);
         
-        // Verify: R' = [s]G + [e]Y
+        // Verify: R' = [s]G + [e]Y (using optimized windowed multiplication)
         let g_s = Self::ecpk_scalar_mul(&generator, &s, &a, &modulus_poly, &prime);
         let y_e = Self::ecpk_scalar_mul(&public_key, &e_scalar, &a, &modulus_poly, &prime);
         

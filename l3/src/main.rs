@@ -1,6 +1,8 @@
 use l3::api::{ChallengeTestRunner, ChallengeType, CryptoApiClient};
 use std::io::{self, Write};
 
+type TestCase = (ChallengeType, &'static str, fn(&ChallengeTestRunner) -> l3::api::ChallengeTestResult);
+
 fn main() {
     println!("================================================================================");
     println!("L3 - Crypto Challenge API Test (test endpoints only)");
@@ -22,7 +24,7 @@ fn main() {
 
     let runner = ChallengeTestRunner::with_client(client);
     
-    let tests: Vec<(ChallengeType, &str, fn(&ChallengeTestRunner) -> _)> = vec![
+    let tests: Vec<TestCase> = vec![
         (ChallengeType::Modp, "ModP (prime field DH)", |r| r.run_modp_tests()),
         (ChallengeType::F2m, "F2m (binary field DH)", |r| r.run_f2m_tests()),
         (ChallengeType::Fpk, "Fpk (extension field DH)", |r| r.run_fpk_tests()),
