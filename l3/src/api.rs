@@ -7,6 +7,7 @@ use crate::bigint::BigInt;
 use crate::elliptic_curve::Point;
 use crate::field::{BinaryField, ExtensionField, FieldConfig, PrimeField};
 use crate::schnorr::SchnorrSignature;
+use once_cell::sync::OnceCell;
 use rand::Rng;
 use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
@@ -247,6 +248,13 @@ pub struct TestSignatureResponse {
 pub struct CryptoApiClient {
     client: Client,
     base_url: String,
+    // Cached parameters to avoid redundant HTTP calls
+    modp_params: OnceCell<ModPParams>,
+    f2m_params: OnceCell<F2mParams>,
+    fpk_params: OnceCell<FpkParams>,
+    ecp_params: OnceCell<ECPParams>,
+    ec2m_params: OnceCell<EC2mParams>,
+    ecpk_params: OnceCell<ECPkParams>,
 }
 
 impl CryptoApiClient {
@@ -260,6 +268,12 @@ impl CryptoApiClient {
         Self {
             client,
             base_url: API_BASE_URL.to_string(),
+            modp_params: OnceCell::new(),
+            f2m_params: OnceCell::new(),
+            fpk_params: OnceCell::new(),
+            ecp_params: OnceCell::new(),
+            ec2m_params: OnceCell::new(),
+            ecpk_params: OnceCell::new(),
         }
     }
 
@@ -273,6 +287,12 @@ impl CryptoApiClient {
         Self {
             client,
             base_url: base_url.to_string(),
+            modp_params: OnceCell::new(),
+            f2m_params: OnceCell::new(),
+            fpk_params: OnceCell::new(),
+            ecp_params: OnceCell::new(),
+            ec2m_params: OnceCell::new(),
+            ecpk_params: OnceCell::new(),
         }
     }
 
@@ -296,46 +316,58 @@ impl CryptoApiClient {
         Ok(body)
     }
 
-    /// Get ModP parameters
-    pub fn get_modp_params(&self) -> Result<ModPParams, ApiError> {
-        let resp = self.get_test_params(ChallengeType::Modp)?;
-        let params: ModPParams = serde_json::from_value(resp.params)?;
-        Ok(params)
+    /// Get ModP parameters (cached)
+    pub fn get_modp_params(&self) -> Result<&ModPParams, ApiError> {
+        self.modp_params.get_or_try_init(|| {
+            let resp = self.get_test_params(ChallengeType::Modp)?;
+            let params: ModPParams = serde_json::from_value(resp.params)?;
+            Ok(params)
+        })
     }
 
-    /// Get F2m parameters
-    pub fn get_f2m_params(&self) -> Result<F2mParams, ApiError> {
-        let resp = self.get_test_params(ChallengeType::F2m)?;
-        let params: F2mParams = serde_json::from_value(resp.params)?;
-        Ok(params)
+    /// Get F2m parameters (cached)
+    pub fn get_f2m_params(&self) -> Result<&F2mParams, ApiError> {
+        self.f2m_params.get_or_try_init(|| {
+            let resp = self.get_test_params(ChallengeType::F2m)?;
+            let params: F2mParams = serde_json::from_value(resp.params)?;
+            Ok(params)
+        })
     }
 
-    /// Get Fpk parameters
-    pub fn get_fpk_params(&self) -> Result<FpkParams, ApiError> {
-        let resp = self.get_test_params(ChallengeType::Fpk)?;
-        let params: FpkParams = serde_json::from_value(resp.params)?;
-        Ok(params)
+    /// Get Fpk parameters (cached)
+    pub fn get_fpk_params(&self) -> Result<&FpkParams, ApiError> {
+        self.fpk_params.get_or_try_init(|| {
+            let resp = self.get_test_params(ChallengeType::Fpk)?;
+            let params: FpkParams = serde_json::from_value(resp.params)?;
+            Ok(params)
+        })
     }
 
-    /// Get ECP parameters
-    pub fn get_ecp_params(&self) -> Result<ECPParams, ApiError> {
-        let resp = self.get_test_params(ChallengeType::Ecp)?;
-        let params: ECPParams = serde_json::from_value(resp.params)?;
-        Ok(params)
+    /// Get ECP parameters (cached)
+    pub fn get_ecp_params(&self) -> Result<&ECPParams, ApiError> {
+        self.ecp_params.get_or_try_init(|| {
+            let resp = self.get_test_params(ChallengeType::Ecp)?;
+            let params: ECPParams = serde_json::from_value(resp.params)?;
+            Ok(params)
+        })
     }
 
-    /// Get EC2m parameters
-    pub fn get_ec2m_params(&self) -> Result<EC2mParams, ApiError> {
-        let resp = self.get_test_params(ChallengeType::Ec2m)?;
-        let params: EC2mParams = serde_json::from_value(resp.params)?;
-        Ok(params)
+    /// Get EC2m parameters (cached)
+    pub fn get_ec2m_params(&self) -> Result<&EC2mParams, ApiError> {
+        self.ec2m_params.get_or_try_init(|| {
+            let resp = self.get_test_params(ChallengeType::Ec2m)?;
+            let params: EC2mParams = serde_json::from_value(resp.params)?;
+            Ok(params)
+        })
     }
 
-    /// Get ECPk parameters
-    pub fn get_ecpk_params(&self) -> Result<ECPkParams, ApiError> {
-        let resp = self.get_test_params(ChallengeType::Ecpk)?;
-        let params: ECPkParams = serde_json::from_value(resp.params)?;
-        Ok(params)
+    /// Get ECPk parameters (cached)
+    pub fn get_ecpk_params(&self) -> Result<&ECPkParams, ApiError> {
+        self.ecpk_params.get_or_try_init(|| {
+            let resp = self.get_test_params(ChallengeType::Ecpk)?;
+            let params: ECPkParams = serde_json::from_value(resp.params)?;
+            Ok(params)
+        })
     }
 
     // ========================================================================
@@ -470,25 +502,18 @@ pub fn hex_to_bytes(hex: &str) -> Vec<u8> {
         return vec![];
     }
     
-    // Handle odd-length hex strings
-    let hex = if hex.len() % 2 == 1 {
-        format!("0{}", hex)
+    // Handle odd-length hex strings by prepending '0'
+    if hex.len() % 2 == 1 {
+        let padded = format!("0{}", hex);
+        hex::decode(&padded).unwrap_or_else(|_| vec![])
     } else {
-        hex.to_string()
-    };
-    
-    hex.as_bytes()
-        .chunks(2)
-        .map(|chunk| {
-            let s = std::str::from_utf8(chunk).unwrap();
-            u8::from_str_radix(s, 16).unwrap()
-        })
-        .collect()
+        hex::decode(hex).unwrap_or_else(|_| vec![])
+    }
 }
 
 /// Convert bytes to hex string (big-endian, uppercase)
 pub fn bytes_to_hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|b| format!("{:02X}", b)).collect()
+    hex::encode_upper(bytes)
 }
 
 /// Convert BigInt to hex string with proper padding for a given bit length
@@ -569,11 +594,12 @@ pub fn encode_prime_field_for_api<C: FieldConfig<N>, const N: usize>(
     let target_len = byte_len * 2;
     
     let hex = field.value().to_hex();
-    if hex.len() < target_len {
-        format!("{:0>width$}", hex, width = target_len).to_uppercase()
+    let padded = if hex.len() < target_len {
+        format!("{:0>width$}", hex, width = target_len)
     } else {
-        hex.to_uppercase()
-    }
+        hex
+    };
+    padded.to_uppercase()
 }
 
 /// Encode a BinaryField element for API (hex string, uppercase)
@@ -584,11 +610,12 @@ pub fn encode_binary_field_for_api<C: FieldConfig<N>, const N: usize, const K: u
     let target_len = byte_len * 2;
     
     let hex = field.bits().to_hex();
-    if hex.len() < target_len {
-        format!("{:0>width$}", hex, width = target_len).to_uppercase()
+    let padded = if hex.len() < target_len {
+        format!("{:0>width$}", hex, width = target_len)
     } else {
-        hex.to_uppercase()
-    }
+        hex
+    };
+    padded.to_uppercase()
 }
 
 /// Encode an ExtensionField element for API (array of hex strings)
@@ -604,11 +631,12 @@ pub fn encode_extension_field_for_api<C: FieldConfig<N>, const N: usize, const K
         .iter()
         .map(|coeff| {
             let hex = coeff.to_hex();
-            if hex.len() < target_len {
-                format!("{:0>width$}", hex, width = target_len).to_uppercase()
+            let padded = if hex.len() < target_len {
+                format!("{:0>width$}", hex, width = target_len)
             } else {
-                hex.to_uppercase()
-            }
+                hex
+            };
+            padded.to_uppercase()
         })
         .collect()
 }
@@ -764,11 +792,13 @@ pub fn bigint_to_padded_hex<const N: usize>(value: &BigInt<N>, byte_len: usize) 
 pub fn bigint_to_padded_hex_upper<const N: usize>(value: &BigInt<N>, byte_len: usize) -> String {
     let hex = value.to_hex();
     let target_len = byte_len * 2;
-    if hex.len() < target_len {
-        format!("{:0>width$}", hex, width = target_len).to_uppercase()
+    let padded = if hex.len() < target_len {
+        format!("{:0>width$}", hex, width = target_len)
     } else {
-        hex.to_uppercase()
-    }
+        hex
+    };
+    // Convert to uppercase once for the entire string
+    padded.to_uppercase()
 }
 
 /// Test result for a single challenge type
@@ -814,9 +844,7 @@ impl ChallengeTestRunner {
     }
 
     /// Test ModP DH exchange
-    pub fn test_modp_dh(&self) -> Result<(), ApiError> {
-        let params = self.client.get_modp_params()?;
-        
+    pub fn test_modp_dh(&self, params: &ModPParams) -> Result<(), ApiError> {
         let order = BigInt::<BIGINT_LIMBS>::from_hex(&params.order);
         let generator = BigInt::<BIGINT_LIMBS>::from_hex(&params.generator);
         let modulus = BigInt::<BIGINT_LIMBS>::from_hex(&params.modulus);
@@ -841,8 +869,8 @@ impl ChallengeTestRunner {
         let our_shared_secret = mod_pow(&server_public, &private_key, &modulus);
         let our_shared_hex = bigint_to_padded_hex_upper(&our_shared_secret, modulus_byte_len);
         
-        // Compare
-        if our_shared_hex.to_uppercase() == response.shared_secret.to_uppercase() {
+        // Compare (our_shared_hex is already uppercase, use case-insensitive comparison to avoid allocation)
+        if our_shared_hex.eq_ignore_ascii_case(&response.shared_secret) {
             Ok(())
         } else {
             Err(ApiError::Validation("DH shared secrets don't match".to_string()))
@@ -850,8 +878,7 @@ impl ChallengeTestRunner {
     }
 
     /// Test ModP Schnorr signature verification
-    pub fn test_modp_signature(&self, message: &str) -> Result<(), ApiError> {
-        let params = self.client.get_modp_params()?;
+    pub fn test_modp_signature(&self, params: &ModPParams, message: &str) -> Result<(), ApiError> {
         let response = self.client.test_signature(ChallengeType::Modp, message)?;
         
         let order = BigInt::<BIGINT_LIMBS>::from_hex(&params.order);
@@ -896,7 +923,19 @@ impl ChallengeTestRunner {
     pub fn run_modp_tests(&self) -> ChallengeTestResult {
         let mut result = ChallengeTestResult::success(ChallengeType::Modp);
         
-        match self.test_modp_dh() {
+        // Fetch params once and reuse for both tests
+        let params = match self.client.get_modp_params() {
+            Ok(p) => p,
+            Err(e) => {
+                result.dh_success = false;
+                result.dh_error = Some(format!("Failed to fetch params: {}", e));
+                result.signature_success = false;
+                result.signature_error = Some(format!("Failed to fetch params: {}", e));
+                return result;
+            }
+        };
+        
+        match self.test_modp_dh(params) {
             Ok(()) => result.dh_success = true,
             Err(e) => {
                 result.dh_success = false;
@@ -904,7 +943,7 @@ impl ChallengeTestRunner {
             }
         }
         
-        match self.test_modp_signature("test message") {
+        match self.test_modp_signature(params, "test message") {
             Ok(()) => result.signature_success = true,
             Err(e) => {
                 result.signature_success = false;
@@ -998,9 +1037,7 @@ impl ChallengeTestRunner {
     }
 
     /// Test F2m DH exchange
-    pub fn test_f2m_dh(&self) -> Result<(), ApiError> {
-        let params = self.client.get_f2m_params()?;
-        
+    pub fn test_f2m_dh(&self, params: &F2mParams) -> Result<(), ApiError> {
         let generator = BigInt::<BIGINT_LIMBS>::from_hex(&params.generator);
         let modulus = BigInt::<BIGINT_LIMBS>::from_hex(&params.modulus);
         let m = params.extension;
@@ -1023,8 +1060,8 @@ impl ChallengeTestRunner {
         let our_shared_secret = Self::f2m_pow(&server_public, &private_key, &modulus, m);
         let our_shared_hex = bigint_to_padded_hex_upper(&our_shared_secret, byte_len);
         
-        // Compare
-        if our_shared_hex.to_uppercase() == response.shared_secret.to_uppercase() {
+        // Compare (our_shared_hex is already uppercase from bigint_to_padded_hex_upper)
+        if our_shared_hex.eq_ignore_ascii_case(&response.shared_secret) {
             Ok(())
         } else {
             Err(ApiError::Validation("F2m DH shared secrets don't match".to_string()))
@@ -1032,8 +1069,7 @@ impl ChallengeTestRunner {
     }
 
     /// Test F2m Schnorr signature verification
-    pub fn test_f2m_signature(&self, message: &str) -> Result<(), ApiError> {
-        let params = self.client.get_f2m_params()?;
+    pub fn test_f2m_signature(&self, params: &F2mParams, message: &str) -> Result<(), ApiError> {
         let response = self.client.test_signature(ChallengeType::F2m, message)?;
         
         let order = BigInt::<BIGINT_LIMBS>::from_hex(&params.order);
@@ -1079,7 +1115,19 @@ impl ChallengeTestRunner {
     pub fn run_f2m_tests(&self) -> ChallengeTestResult {
         let mut result = ChallengeTestResult::success(ChallengeType::F2m);
         
-        match self.test_f2m_dh() {
+        // Fetch params once and reuse for both tests
+        let params = match self.client.get_f2m_params() {
+            Ok(p) => p,
+            Err(e) => {
+                result.dh_success = false;
+                result.dh_error = Some(format!("Failed to fetch params: {}", e));
+                result.signature_success = false;
+                result.signature_error = Some(format!("Failed to fetch params: {}", e));
+                return result;
+            }
+        };
+        
+        match self.test_f2m_dh(params) {
             Ok(()) => result.dh_success = true,
             Err(e) => {
                 result.dh_success = false;
@@ -1087,7 +1135,7 @@ impl ChallengeTestRunner {
             }
         }
         
-        match self.test_f2m_signature("test message") {
+        match self.test_f2m_signature(params, "test message") {
             Ok(()) => result.signature_success = true,
             Err(e) => {
                 result.signature_success = false;
@@ -1246,9 +1294,7 @@ impl ChallengeTestRunner {
     }
 
     /// Test Fpk DH exchange
-    pub fn test_fpk_dh(&self) -> Result<(), ApiError> {
-        let params = self.client.get_fpk_params()?;
-        
+    pub fn test_fpk_dh(&self, params: &FpkParams) -> Result<(), ApiError> {
         let prime = BigInt::<BIGINT_LIMBS>::from_hex(&params.prime_base);
         let _k = params.extension;
         
@@ -1291,11 +1337,11 @@ impl ChallengeTestRunner {
             .map(|c| bigint_to_padded_hex_upper(c, prime_byte_len))
             .collect();
         
-        // Compare
-        let expected: Vec<String> = response.shared_secret.iter().map(|s| s.to_uppercase()).collect();
-        let got: Vec<String> = our_shared_hex.iter().map(|s| s.to_uppercase()).collect();
+        // Compare (use case-insensitive comparison to avoid allocations)
+        let expected: Vec<&str> = response.shared_secret.iter().map(|s| s.as_str()).collect();
+        let got: Vec<&str> = our_shared_hex.iter().map(|s| s.as_str()).collect();
         
-        if expected == got {
+        if expected.len() == got.len() && expected.iter().zip(got.iter()).all(|(e, g)| e.eq_ignore_ascii_case(g)) {
             Ok(())
         } else {
             Err(ApiError::Validation(format!("Fpk DH shared secrets don't match: expected {:?}, got {:?}", expected, got)))
@@ -1303,8 +1349,7 @@ impl ChallengeTestRunner {
     }
 
     /// Test Fpk Schnorr signature verification
-    pub fn test_fpk_signature(&self, message: &str) -> Result<(), ApiError> {
-        let params = self.client.get_fpk_params()?;
+    pub fn test_fpk_signature(&self, params: &FpkParams, message: &str) -> Result<(), ApiError> {
         let response = self.client.test_signature(ChallengeType::Fpk, message)?;
         
         let prime = BigInt::<BIGINT_LIMBS>::from_hex(&params.prime_base);
@@ -1362,7 +1407,19 @@ impl ChallengeTestRunner {
     pub fn run_fpk_tests(&self) -> ChallengeTestResult {
         let mut result = ChallengeTestResult::success(ChallengeType::Fpk);
         
-        match self.test_fpk_dh() {
+        // Fetch params once and reuse for both tests
+        let params = match self.client.get_fpk_params() {
+            Ok(p) => p,
+            Err(e) => {
+                result.dh_success = false;
+                result.dh_error = Some(format!("Failed to fetch params: {}", e));
+                result.signature_success = false;
+                result.signature_error = Some(format!("Failed to fetch params: {}", e));
+                return result;
+            }
+        };
+        
+        match self.test_fpk_dh(params) {
             Ok(()) => result.dh_success = true,
             Err(e) => {
                 result.dh_success = false;
@@ -1370,7 +1427,7 @@ impl ChallengeTestRunner {
             }
         }
         
-        match self.test_fpk_signature("test message") {
+        match self.test_fpk_signature(params, "test message") {
             Ok(()) => result.signature_success = true,
             Err(e) => {
                 result.signature_success = false;
@@ -1663,9 +1720,7 @@ impl ChallengeTestRunner {
     }
 
     /// Test ECP DH exchange
-    pub fn test_ecp_dh(&self) -> Result<(), ApiError> {
-        let params = self.client.get_ecp_params()?;
-        
+    pub fn test_ecp_dh(&self, params: &ECPParams) -> Result<(), ApiError> {
         let modulus = BigInt::<BIGINT_LIMBS>::from_hex(&params.modulus);
         let _order = BigInt::<BIGINT_LIMBS>::from_hex(&params.order);
         let a = BigInt::<BIGINT_LIMBS>::from_hex(&params.a);
@@ -1702,9 +1757,9 @@ impl ChallengeTestRunner {
         let our_shared_x = bigint_to_padded_hex_upper(&our_shared.0, byte_len);
         let our_shared_y = bigint_to_padded_hex_upper(&our_shared.1, byte_len);
         
-        // Compare
-        if our_shared_x.to_uppercase() == response.shared_secret.x.to_uppercase() 
-            && our_shared_y.to_uppercase() == response.shared_secret.y.to_uppercase() {
+        // Compare (use case-insensitive comparison to avoid allocations)
+        if our_shared_x.eq_ignore_ascii_case(&response.shared_secret.x) 
+            && our_shared_y.eq_ignore_ascii_case(&response.shared_secret.y) {
             Ok(())
         } else {
             Err(ApiError::Validation("ECP DH shared secrets don't match".to_string()))
@@ -1712,8 +1767,7 @@ impl ChallengeTestRunner {
     }
 
     /// Test ECP Schnorr signature verification
-    pub fn test_ecp_signature(&self, message: &str) -> Result<(), ApiError> {
-        let params = self.client.get_ecp_params()?;
+    pub fn test_ecp_signature(&self, params: &ECPParams, message: &str) -> Result<(), ApiError> {
         let response = self.client.test_signature(ChallengeType::Ecp, message)?;
         
         let modulus = BigInt::<BIGINT_LIMBS>::from_hex(&params.modulus);
@@ -1775,7 +1829,19 @@ impl ChallengeTestRunner {
     pub fn run_ecp_tests(&self) -> ChallengeTestResult {
         let mut result = ChallengeTestResult::success(ChallengeType::Ecp);
         
-        match self.test_ecp_dh() {
+        // Fetch params once and reuse for both tests
+        let params = match self.client.get_ecp_params() {
+            Ok(p) => p,
+            Err(e) => {
+                result.dh_success = false;
+                result.dh_error = Some(format!("Failed to fetch params: {}", e));
+                result.signature_success = false;
+                result.signature_error = Some(format!("Failed to fetch params: {}", e));
+                return result;
+            }
+        };
+        
+        match self.test_ecp_dh(params) {
             Ok(()) => result.dh_success = true,
             Err(e) => {
                 result.dh_success = false;
@@ -1783,7 +1849,7 @@ impl ChallengeTestRunner {
             }
         }
         
-        match self.test_ecp_signature("test message") {
+        match self.test_ecp_signature(params, "test message") {
             Ok(()) => result.signature_success = true,
             Err(e) => {
                 result.signature_success = false;
@@ -1944,9 +2010,7 @@ impl ChallengeTestRunner {
     }
 
     /// Test EC2m DH exchange
-    pub fn test_ec2m_dh(&self) -> Result<(), ApiError> {
-        let params = self.client.get_ec2m_params()?;
-        
+    pub fn test_ec2m_dh(&self, params: &EC2mParams) -> Result<(), ApiError> {
         let m = params.extension;
         let red_poly = BigInt::<BIGINT_LIMBS>::from_hex(&params.modulus);
         let a = BigInt::<BIGINT_LIMBS>::from_hex(&params.a);
@@ -1983,9 +2047,9 @@ impl ChallengeTestRunner {
         let our_shared_x = bigint_to_padded_hex_upper(&our_shared.0, byte_len);
         let our_shared_y = bigint_to_padded_hex_upper(&our_shared.1, byte_len);
         
-        // Compare
-        if our_shared_x.to_uppercase() == response.shared_secret.x.to_uppercase()
-            && our_shared_y.to_uppercase() == response.shared_secret.y.to_uppercase() {
+        // Compare (use case-insensitive comparison to avoid allocations)
+        if our_shared_x.eq_ignore_ascii_case(&response.shared_secret.x)
+            && our_shared_y.eq_ignore_ascii_case(&response.shared_secret.y) {
             Ok(())
         } else {
             Err(ApiError::Validation("EC2m DH shared secrets don't match".to_string()))
@@ -1993,8 +2057,7 @@ impl ChallengeTestRunner {
     }
 
     /// Test EC2m Schnorr signature verification
-    pub fn test_ec2m_signature(&self, message: &str) -> Result<(), ApiError> {
-        let params = self.client.get_ec2m_params()?;
+    pub fn test_ec2m_signature(&self, params: &EC2mParams, message: &str) -> Result<(), ApiError> {
         let response = self.client.test_signature(ChallengeType::Ec2m, message)?;
         
         let m = params.extension;
@@ -2057,7 +2120,19 @@ impl ChallengeTestRunner {
     pub fn run_ec2m_tests(&self) -> ChallengeTestResult {
         let mut result = ChallengeTestResult::success(ChallengeType::Ec2m);
         
-        match self.test_ec2m_dh() {
+        // Fetch params once and reuse for both tests
+        let params = match self.client.get_ec2m_params() {
+            Ok(p) => p,
+            Err(e) => {
+                result.dh_success = false;
+                result.dh_error = Some(format!("Failed to fetch params: {}", e));
+                result.signature_success = false;
+                result.signature_error = Some(format!("Failed to fetch params: {}", e));
+                return result;
+            }
+        };
+        
+        match self.test_ec2m_dh(params) {
             Ok(()) => result.dh_success = true,
             Err(e) => {
                 result.dh_success = false;
@@ -2065,7 +2140,7 @@ impl ChallengeTestRunner {
             }
         }
         
-        match self.test_ec2m_signature("test message") {
+        match self.test_ec2m_signature(params, "test message") {
             Ok(()) => result.signature_success = true,
             Err(e) => {
                 result.signature_success = false;
@@ -2260,9 +2335,7 @@ impl ChallengeTestRunner {
     }
 
     /// Test ECPk DH exchange
-    pub fn test_ecpk_dh(&self) -> Result<(), ApiError> {
-        let params = self.client.get_ecpk_params()?;
-        
+    pub fn test_ecpk_dh(&self, params: &ECPkParams) -> Result<(), ApiError> {
         let prime = BigInt::<BIGINT_LIMBS>::from_hex(&params.prime_base);
         let _k = params.extension;
         
@@ -2315,8 +2388,7 @@ impl ChallengeTestRunner {
     }
 
     /// Test ECPk Schnorr signature verification
-    pub fn test_ecpk_signature(&self, message: &str) -> Result<(), ApiError> {
-        let params = self.client.get_ecpk_params()?;
+    pub fn test_ecpk_signature(&self, params: &ECPkParams, message: &str) -> Result<(), ApiError> {
         let response = self.client.test_signature(ChallengeType::Ecpk, message)?;
         
         let prime = BigInt::<BIGINT_LIMBS>::from_hex(&params.prime_base);
@@ -2383,7 +2455,19 @@ impl ChallengeTestRunner {
     pub fn run_ecpk_tests(&self) -> ChallengeTestResult {
         let mut result = ChallengeTestResult::success(ChallengeType::Ecpk);
         
-        match self.test_ecpk_dh() {
+        // Fetch params once and reuse for both tests
+        let params = match self.client.get_ecpk_params() {
+            Ok(p) => p,
+            Err(e) => {
+                result.dh_success = false;
+                result.dh_error = Some(format!("Failed to fetch params: {}", e));
+                result.signature_success = false;
+                result.signature_error = Some(format!("Failed to fetch params: {}", e));
+                return result;
+            }
+        };
+        
+        match self.test_ecpk_dh(params) {
             Ok(()) => result.dh_success = true,
             Err(e) => {
                 result.dh_success = false;
@@ -2391,7 +2475,7 @@ impl ChallengeTestRunner {
             }
         }
         
-        match self.test_ecpk_signature("test message") {
+        match self.test_ecpk_signature(params, "test message") {
             Ok(()) => result.signature_success = true,
             Err(e) => {
                 result.signature_success = false;
