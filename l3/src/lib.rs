@@ -3,6 +3,8 @@
 //! This library provides generic implementations for finite field arithmetic,
 //! supporting prime fields F_p, extension fields F_p^k, and binary fields F_2^k.
 
+/// API client for crypto25.random-oracle.xyz challenge service
+pub mod api;
 /// Big integer arithmetic module for finite field implementation
 pub mod bigint;
 /// Diffie-Hellman key exchange protocol for various algebraic structures
