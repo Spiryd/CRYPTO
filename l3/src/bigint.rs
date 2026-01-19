@@ -190,7 +190,6 @@ impl<const N: usize> BigInt<N> {
     /// Creates a BigInt from big-endian bytes
     ///
     /// Returns exactly N * 8 bytes in big-endian order (most significant byte first).
-    #[allow(clippy::wrong_self_convention)]
     pub fn to_be_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(N * 8);
 
@@ -470,35 +469,23 @@ impl<const N: usize> BigInt<N> {
         self.div_rem(modulus).1
     }
 
-    /// Modular addition: (self + other) mod modulus
-    /// Assumes self and other are both < modulus
+    /// (self + other) mod modulus, assuming self < modulus and other < modulus
     pub fn mod_add(&self, other: &Self, modulus: &Self) -> Self {
-        let (sum, overflow) = self.add_with_carry(other);
-
-        if overflow {
-            // Sum is sum + 2^(N*64), which is definitely >= modulus
-            // Since self, other < modulus, we have sum + 2^(N*64) < 2*modulus + 2^(N*64)
-            // But for typical cryptographic moduli close to 2^(N*64),
-            // we can just subtract modulus from sum (the low bits)
-            // because 2^(N*64) mod modulus ≈ 2^(N*64) - modulus
-            // So (sum + 2^(N*64)) mod modulus = sum + (2^(N*64) - modulus) = sum - modulus + 2^(N*64)
-            // But we only have the low bits, so this becomes: sum - modulus (+ any carry which is implicit)
-            sum.sub_with_borrow(modulus).0
-        } else if sum.compare(modulus) != Ordering::Less {
+        let (sum, carry) = self.add_with_carry(other);
+        if carry || sum.compare(modulus) != Ordering::Less {
             sum.sub_with_borrow(modulus).0
         } else {
             sum
         }
     }
 
-    /// Modular subtraction: (self - other) mod modulus
+    /// (self - other) mod modulus, assuming self < modulus and other < modulus
     pub fn mod_sub(&self, other: &Self, modulus: &Self) -> Self {
         if self.compare(other) != Ordering::Less {
             self.sub_with_borrow(other).0
         } else {
-            // self < other, need to add modulus
-            let diff = other.sub_with_borrow(self).0;
-            modulus.sub_with_borrow(&diff).0
+            let (tmp, _) = self.add_with_carry(modulus); // self + m
+            tmp.sub_with_borrow(other).0
         }
     }
 

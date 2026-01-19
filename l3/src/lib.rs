@@ -17,6 +17,8 @@ pub mod field;
 pub mod field_trait;
 /// GHASH algorithm for Galois/Counter Mode (GCM)
 pub mod ghash;
+/// Montgomery modular arithmetic context
+pub mod montgomery;
 /// Schnorr digital signature scheme (with BigInt scalars for proper security)
 pub mod schnorr;
 /// Schnorr encoding implementations for field types
