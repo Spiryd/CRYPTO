@@ -29,7 +29,7 @@ pub fn hex_to_bytes(hex: &str) -> Vec<u8> {
 
 /// Convert bytes to hex string (big-endian, uppercase)
 pub fn bytes_to_hex(bytes: &[u8]) -> String {
-    hex::encode_upper(bytes)
+    hex::encode(bytes)
 }
 
 /// Convert BigInt to hex string with proper padding for a given bit length

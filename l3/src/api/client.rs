@@ -228,6 +228,32 @@ impl CryptoApiClient {
         let body: TestSignatureResponse = response.json()?;
         Ok(body)
     }
+
+    // ========================================================================
+    // Submit Challenge Endpoints
+    // ========================================================================
+
+    /// Start a submit challenge session
+    pub fn submit_start(
+        &self,
+        challenge_type: ChallengeType,
+    ) -> Result<SubmitStartResponse, ApiError> {
+        let url = format!("{}/submit/start/{}", self.base_url, challenge_type);
+        let response = self.client.get(&url).send()?;
+        let body: SubmitStartResponse = response.json()?;
+        Ok(body)
+    }
+
+    /// Finish a submit challenge session
+    pub fn submit_finish(
+        &self,
+        request: SubmitFinishRequest,
+    ) -> Result<SubmitFinishResponse, ApiError> {
+        let url = format!("{}/submit/finish", self.base_url);
+        let response = self.client.post(&url).json(&request).send()?;
+        let body: SubmitFinishResponse = response.json()?;
+        Ok(body)
+    }
 }
 
 impl Default for CryptoApiClient {

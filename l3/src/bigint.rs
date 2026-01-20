@@ -27,7 +27,7 @@ use std::ops::{Add, BitAnd, BitOr, BitXor, Mul, Neg, Shl, Shr, Sub};
 /// let b = BigInt::<4>::from_u64(100);
 /// let sum = a + b;
 /// ```
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct BigInt<const N: usize> {
     /// Limbs in little-endian order (limbs[0] is least significant)
     limbs: [u64; N],

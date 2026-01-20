@@ -229,3 +229,36 @@ pub struct TestSignatureResponse {
     pub public: serde_json::Value,
     pub signature: ApiSignature,
 }
+
+// ============================================================================
+// Submit Challenge Types
+// ============================================================================
+
+/// Response from /submit/start/{type}
+#[derive(Debug, Clone, Deserialize)]
+pub struct SubmitStartResponse {
+    pub status: String,
+    #[serde(rename = "type")]
+    pub challenge_type: ChallengeType,
+    pub session_id: String,
+    pub params: serde_json::Value,
+    pub server_public_sign: serde_json::Value,
+    pub server_public_dh: serde_json::Value,
+    pub signature: ApiSignature,
+}
+
+/// Request to /submit/finish
+#[derive(Debug, Clone, Serialize)]
+pub struct SubmitFinishRequest {
+    pub session_id: String,
+    pub client_public_sign: serde_json::Value,
+    pub client_public_dh: serde_json::Value,
+    pub signature: ApiSignature,
+    pub shared_secret: serde_json::Value,
+}
+
+/// Response from /submit/finish
+#[derive(Debug, Clone, Deserialize)]
+pub struct SubmitFinishResponse {
+    pub status: String,
+}
