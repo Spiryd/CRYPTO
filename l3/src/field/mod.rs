@@ -25,6 +25,7 @@ pub mod binary;
 pub mod config;
 pub mod extension;
 pub mod prime;
+pub mod field_trait;
 
 // Re-export main types for convenience
 pub use binary::BinaryField;

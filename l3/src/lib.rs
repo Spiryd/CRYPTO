@@ -7,19 +7,14 @@
 pub mod api;
 /// Big integer arithmetic module for finite field implementation
 pub mod bigint;
-/// Diffie-Hellman key exchange protocol for various algebraic structures
-pub mod diffie_hellman;
+/// Cryptographic primitives (DH, GHASH, Schnorr)
+pub mod crypto;
+pub use crypto::{diffie_hellman, ghash, schnorr, schnorr_encoding};
 /// Elliptic curve groups over finite fields
 pub mod elliptic_curve;
 /// Finite field implementations (F_p, F_p^k, F_2^k)
 pub mod field;
-/// Finite field trait interface
-pub mod field_trait;
-/// GHASH algorithm for Galois/Counter Mode (GCM)
-pub mod ghash;
+/// Re-export field trait module from field namespace
+pub use field::field_trait;
 /// Montgomery modular arithmetic context
 pub mod montgomery;
-/// Schnorr digital signature scheme (with BigInt scalars for proper security)
-pub mod schnorr;
-/// Schnorr encoding implementations for field types
-pub mod schnorr_encoding;
