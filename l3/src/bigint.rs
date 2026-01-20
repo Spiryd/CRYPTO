@@ -93,25 +93,17 @@ impl<const N: usize> BigInt<N> {
             return Self::zero();
         }
 
-        // Parse hex string into bytes (big-endian)
-        let hex_bytes: Vec<u8> = hex.as_bytes().to_vec();
-        let mut bytes = Vec::new();
-
-        // Pad to even length
-        let padded = if hex_bytes.len() % 2 == 1 {
-            let mut p = vec![b'0'];
-            p.extend_from_slice(&hex_bytes);
-            p
+        // If odd length, pad a leading '0'
+        let padded = if hex.len() % 2 == 1 {
+            let mut s = String::with_capacity(hex.len() + 1);
+            s.push('0');
+            s.push_str(hex);
+            s
         } else {
-            hex_bytes
+            hex.to_string()
         };
 
-        for chunk in padded.chunks(2) {
-            let s = std::str::from_utf8(chunk).expect("Invalid UTF8 in hex");
-            let byte = u8::from_str_radix(s, 16).expect("Invalid hex digit");
-            bytes.push(byte);
-        }
-
+        let bytes = hex::decode(padded).expect("Invalid hex digit");
         Self::from_be_bytes(&bytes)
     }
 
