@@ -1629,43 +1629,16 @@ impl SubmitChallengeRunner {
         result_arr[..k].to_vec()
     }
 
-    fn mod_inverse<const N: usize>(a: &BigInt<N>, modulus: &BigInt<N>) -> Option<BigInt<N>> {
-        let mut old_r = *modulus;
-        let mut r = a.modulo(modulus);
-        let mut old_t: (BigInt<N>, bool) = (BigInt::zero(), false);
-        let mut t: (BigInt<N>, bool) = (BigInt::one(), false);
-
-        while !r.is_zero() {
-            let (quotient, remainder) = old_r.div_rem(&r);
-            old_r = r;
-            r = remainder;
-
-            let q_times_t = quotient.mod_mul(&t.0, modulus);
-            let new_t = if old_t.1 == t.1 {
-                let (diff, borrow) = old_t.0.sub_with_borrow(&q_times_t);
-                if borrow {
-                    let (diff2, _) = q_times_t.sub_with_borrow(&old_t.0);
-                    (diff2, !old_t.1)
-                } else {
-                    (diff, old_t.1)
-                }
-            } else {
-                (old_t.0.mod_add(&q_times_t, modulus), old_t.1)
-            };
-
-            old_t = t;
-            t = new_t;
+    /// Compute modular inverse using Fermat's Little Theorem: a^{-1} = a^{p-2} mod p
+    /// Uses Montgomery exponentiation for speed. Only works for prime modulus!
+    fn mod_inverse<const N: usize>(a: &BigInt<N>, prime: &BigInt<N>) -> Option<BigInt<N>> {
+        if a.is_zero() {
+            return None;
         }
-
-        if old_r.is_one() {
-            if old_t.1 {
-                Some(modulus.mod_sub(&old_t.0, modulus))
-            } else {
-                Some(old_t.0.modulo(modulus))
-            }
-        } else {
-            None
-        }
+        // For prime p: a^{-1} = a^{p-2} mod p (Fermat's Little Theorem)
+        let ctx = MontgomeryCtx::new(*prime)?;
+        let p_minus_2 = prime.sub_with_borrow(&BigInt::<N>::from_u64(2)).0;
+        Some(ctx.mod_pow(a, &p_minus_2))
     }
 
     // ========================================================================
@@ -2620,7 +2593,7 @@ impl SubmitChallengeRunner {
 
         let ddeg = divisor.len() - 1;
         let dlead = divisor[ddeg];
-        let dlead_inv = dlead.mod_inverse(p)?;
+        let dlead_inv = Self::mod_inverse::<N>(&dlead, p)?;
 
         while rem.len() >= divisor.len() && !Self::poly_is_zero(&rem) {
             let rdeg = rem.len() - 1;
@@ -2702,7 +2675,7 @@ impl SubmitChallengeRunner {
         if g.is_zero() {
             return None;
         }
-        let g_inv = g.mod_inverse(prime)?;
+        let g_inv = Self::mod_inverse::<N>(g, prime)?;
 
         let mut inv: Vec<BigInt<N>> = old_t.iter().map(|c| c.mod_mul(&g_inv, prime)).collect();
 
