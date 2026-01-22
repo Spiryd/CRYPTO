@@ -27,7 +27,7 @@ pub use helpers::{
     encode_extension_field_for_api, encode_prime_field_for_api, generate_random_bigint,
     hash_to_scalar, hex_to_bytes, mod_pow, strip_json_quotes,
 };
-pub use submit_runner::{SubmitChallengeRunner, SubmitResult};
+pub use submit_runner::{SubmitChallengeRunner, SubmitResult, TimingInfo};
 pub use test_runner::{ChallengeTestResult, ChallengeTestRunner};
 pub use types::{
     ApiSignature, BaseResponse, ChallengeType, EC2mParams, EC2mPoint, ECPParams, ECPPoint,

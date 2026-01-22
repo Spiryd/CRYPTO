@@ -413,7 +413,8 @@ impl<const N: usize> BigInt<N> {
 
     /// Division with remainder: self / other = (quotient, remainder)
     ///
-    /// Uses long division algorithm.
+    /// Uses word-based long division (Knuth Algorithm D) for efficiency.
+    /// This operates on 64-bit words instead of individual bits.
     ///
     /// # Panics
     /// Panics if dividing by zero
@@ -428,29 +429,171 @@ impl<const N: usize> BigInt<N> {
             return (*self, Self::zero());
         }
 
-        // Long division algorithm
+        // Find the actual number of significant limbs in divisor
+        let divisor_len = Self::significant_limbs(divisor);
+        
+        // Special case: single-limb divisor (very common and can be optimized)
+        if divisor_len == 1 {
+            return Self::div_rem_single_limb(self, divisor.limbs[0]);
+        }
+
+        // General case: multi-limb division using Knuth Algorithm D
+        Self::div_rem_knuth(self, divisor, divisor_len)
+    }
+
+    /// Count the number of significant (non-zero from the top) limbs
+    #[inline]
+    fn significant_limbs(x: &Self) -> usize {
+        for i in (0..N).rev() {
+            if x.limbs[i] != 0 {
+                return i + 1;
+            }
+        }
+        1 // At least 1 limb (even for zero)
+    }
+
+    /// Division by a single 64-bit limb - much faster than general case
+    fn div_rem_single_limb(dividend: &Self, divisor: u64) -> (Self, Self) {
         let mut quotient = Self::zero();
+        let mut remainder: u128 = 0;
+
+        // Process from most significant limb to least significant
+        for i in (0..N).rev() {
+            let cur = (remainder << 64) | (dividend.limbs[i] as u128);
+            quotient.limbs[i] = (cur / (divisor as u128)) as u64;
+            remainder = cur % (divisor as u128);
+        }
+
+        let mut rem_bigint = Self::zero();
+        rem_bigint.limbs[0] = remainder as u64;
+        (quotient, rem_bigint)
+    }
+
+    /// Knuth's Algorithm D for multi-limb division
+    /// This is O(n*m) where n is dividend limbs and m is divisor limbs
+    fn div_rem_knuth(dividend: &Self, divisor: &Self, divisor_len: usize) -> (Self, Self) {
+        let dividend_len = Self::significant_limbs(dividend);
+        
+        // If dividend has fewer limbs than divisor, result is 0 with dividend as remainder
+        if dividend_len < divisor_len {
+            return (Self::zero(), *dividend);
+        }
+
+        // Normalize: shift so that the most significant bit of divisor is set
+        // This ensures accurate quotient digit estimation
+        let shift = divisor.limbs[divisor_len - 1].leading_zeros() as usize;
+        
+        // Create normalized copies - use Vec for u since it needs N+1 elements
+        let mut u: Vec<u64> = vec![0u64; N + 1]; // dividend with extra limb
+        let mut v = [0u64; N];                    // divisor
+        
+        // Shift dividend left by 'shift' bits
+        if shift > 0 {
+            let mut carry = 0u64;
+            for (i, u_elem) in u.iter_mut().enumerate().take(dividend_len) {
+                let new_carry = dividend.limbs[i] >> (64 - shift);
+                *u_elem = (dividend.limbs[i] << shift) | carry;
+                carry = new_carry;
+            }
+            u[dividend_len] = carry;
+            
+            // Shift divisor left by 'shift' bits
+            carry = 0;
+            for (i, v_elem) in v.iter_mut().enumerate().take(divisor_len) {
+                let new_carry = divisor.limbs[i] >> (64 - shift);
+                *v_elem = (divisor.limbs[i] << shift) | carry;
+                carry = new_carry;
+            }
+        } else {
+            u[..dividend_len].copy_from_slice(&dividend.limbs[..dividend_len]);
+            v[..divisor_len].copy_from_slice(&divisor.limbs[..divisor_len]);
+        }
+
+        let n = divisor_len;
+        let m = dividend_len + 1 - n; // number of quotient digits
+        
+        let mut quotient = Self::zero();
+        let v_n_minus_1 = v[n - 1]; // Most significant limb of divisor
+        let v_n_minus_2 = if n >= 2 { v[n - 2] } else { 0 };
+
+        // Main loop: compute each quotient digit
+        for j in (0..m).rev() {
+            // Estimate quotient digit q_hat = floor((u[j+n]*2^64 + u[j+n-1]) / v[n-1])
+            let u_hi = u[j + n];
+            let u_lo = u[j + n - 1];
+            let dividend_2limb = ((u_hi as u128) << 64) | (u_lo as u128);
+            
+            let mut q_hat = if u_hi >= v_n_minus_1 {
+                u64::MAX // Overflow case
+            } else {
+                (dividend_2limb / (v_n_minus_1 as u128)) as u64
+            };
+            let mut r_hat = (dividend_2limb - (q_hat as u128) * (v_n_minus_1 as u128)) as u64;
+
+            // Refine estimate: while q_hat*v[n-2] > r_hat*2^64 + u[j+n-2]
+            loop {
+                if q_hat == u64::MAX {
+                    break; // Can't refine further
+                }
+                let lhs = (q_hat as u128) * (v_n_minus_2 as u128);
+                let u_jn2 = if j + n >= 2 { u[j + n - 2] } else { 0 };
+                let rhs = ((r_hat as u128) << 64) | (u_jn2 as u128);
+                
+                if lhs <= rhs {
+                    break;
+                }
+                
+                q_hat -= 1;
+                let (new_r, overflow) = r_hat.overflowing_add(v_n_minus_1);
+                if overflow {
+                    break;
+                }
+                r_hat = new_r;
+            }
+
+            // Multiply and subtract: u[j..j+n] -= q_hat * v[0..n]
+            let mut borrow: i128 = 0;
+            for i in 0..n {
+                let product = (q_hat as u128) * (v[i] as u128);
+                let sub = (u[j + i] as i128) - (product as i128) - borrow;
+                u[j + i] = sub as u64;
+                borrow = if sub < 0 { 
+                    ((-sub) >> 64) as i128 + if ((-sub) as u64) > 0 { 1 } else { 0 }
+                } else {
+                    -((sub >> 64) as i128)
+                };
+            }
+            let sub_hi = (u[j + n] as i128) - borrow;
+            u[j + n] = sub_hi as u64;
+
+            // If we subtracted too much, add back
+            if sub_hi < 0 {
+                q_hat -= 1;
+                let mut carry = 0u64;
+                for i in 0..n {
+                    let sum = (u[j + i] as u128) + (v[i] as u128) + (carry as u128);
+                    u[j + i] = sum as u64;
+                    carry = (sum >> 64) as u64;
+                }
+                u[j + n] = u[j + n].wrapping_add(carry);
+            }
+
+            if j < N {
+                quotient.limbs[j] = q_hat;
+            }
+        }
+
+        // Denormalize remainder: shift right by 'shift' bits
         let mut remainder = Self::zero();
-
-        // Process bits from most significant to least significant
-        for i in (0..Self::BITS).rev() {
-            // Shift remainder left by 1 using the method directly
-            remainder = Self::shl(&remainder, 1).0;
-
-            // Set the lowest bit of remainder to the current bit of dividend
-            let limb_idx = i / 64;
-            let bit_idx = i % 64;
-            if (self.limbs[limb_idx] >> bit_idx) & 1 == 1 {
-                remainder.limbs[0] |= 1;
+        if shift > 0 {
+            let mut carry = 0u64;
+            for i in (0..n).rev() {
+                let new_carry = u[i] << (64 - shift);
+                remainder.limbs[i] = (u[i] >> shift) | carry;
+                carry = new_carry;
             }
-
-            // If remainder >= divisor, subtract divisor and set quotient bit
-            if remainder.compare(divisor) != Ordering::Less {
-                remainder = remainder.sub_with_borrow(divisor).0;
-                let q_limb_idx = i / 64;
-                let q_bit_idx = i % 64;
-                quotient.limbs[q_limb_idx] |= 1u64 << q_bit_idx;
-            }
+        } else {
+            remainder.limbs[..n].copy_from_slice(&u[..n]);
         }
 
         (quotient, remainder)

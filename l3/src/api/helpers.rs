@@ -27,9 +27,104 @@ pub fn hex_to_bytes(hex: &str) -> Vec<u8> {
     }
 }
 
-/// Convert bytes to hex string (big-endian, uppercase)
+/// Convert bytes to hex string (big-endian, lowercase)
 pub fn bytes_to_hex(bytes: &[u8]) -> String {
     hex::encode(bytes)
+}
+
+// ============================================================================
+// Efficient Hash Input Construction (avoids allocations in hot loops)
+// ============================================================================
+
+/// Build a JSON-quoted hex string directly into a buffer: `"HEXVALUE"`
+/// Uses lowercase hex to match bigint_to_padded_hex behavior.
+#[inline]
+pub fn write_quoted_hex_to_buffer(buf: &mut Vec<u8>, bytes: &[u8]) {
+    const HEX_CHARS_LOWER: &[u8; 16] = b"0123456789abcdef";
+    buf.push(b'"');
+    for &byte in bytes {
+        buf.push(HEX_CHARS_LOWER[(byte >> 4) as usize]);
+        buf.push(HEX_CHARS_LOWER[(byte & 0x0F) as usize]);
+    }
+    buf.push(b'"');
+}
+
+/// Build a JSON-quoted padded BigInt hex directly into a buffer
+/// Uses lowercase hex to match bigint_to_padded_hex behavior.
+#[inline]
+pub fn write_quoted_bigint_to_buffer<const N: usize>(
+    buf: &mut Vec<u8>,
+    value: &BigInt<N>,
+    byte_len: usize,
+) {
+    const HEX_CHARS_LOWER: &[u8; 16] = b"0123456789abcdef";
+    let bytes = value.to_be_bytes();
+    
+    // Find the actual start of significant bytes
+    let total_bytes = bytes.len();
+    let skip = total_bytes.saturating_sub(byte_len);
+    let significant_bytes = &bytes[skip..];
+    let padding_needed = byte_len.saturating_sub(significant_bytes.len());
+    
+    buf.push(b'"');
+    // Write leading zeros for padding
+    for _ in 0..padding_needed {
+        buf.push(b'0');
+        buf.push(b'0');
+    }
+    // Write actual hex digits
+    for &byte in significant_bytes {
+        buf.push(HEX_CHARS_LOWER[(byte >> 4) as usize]);
+        buf.push(HEX_CHARS_LOWER[(byte & 0x0F) as usize]);
+    }
+    buf.push(b'"');
+}
+
+/// Build a JSON EC point object directly into a buffer: `{"x":"HEX","y":"HEX"}`
+#[inline]
+pub fn write_ec_point_to_buffer<const N: usize>(
+    buf: &mut Vec<u8>,
+    x: &BigInt<N>,
+    y: &BigInt<N>,
+    byte_len: usize,
+) {
+    buf.extend_from_slice(b"{\"x\":");
+    write_quoted_bigint_to_buffer(buf, x, byte_len);
+    buf.extend_from_slice(b",\"y\":");
+    write_quoted_bigint_to_buffer(buf, y, byte_len);
+    buf.push(b'}');
+}
+
+/// Build a JSON extension field element directly into buffer: `["HEX","HEX",...]`
+#[inline]
+pub fn write_ext_field_to_buffer<const N: usize>(
+    buf: &mut Vec<u8>,
+    coeffs: &[BigInt<N>],
+    byte_len: usize,
+) {
+    buf.push(b'[');
+    for (i, coeff) in coeffs.iter().enumerate() {
+        if i > 0 {
+            buf.push(b',');
+        }
+        write_quoted_bigint_to_buffer(buf, coeff, byte_len);
+    }
+    buf.push(b']');
+}
+
+/// Build a JSON EC point over extension field: `{"x":[...],"y":[...]}`
+#[inline]
+pub fn write_ec_ext_point_to_buffer<const N: usize>(
+    buf: &mut Vec<u8>,
+    x_coeffs: &[BigInt<N>],
+    y_coeffs: &[BigInt<N>],
+    byte_len: usize,
+) {
+    buf.extend_from_slice(b"{\"x\":");
+    write_ext_field_to_buffer(buf, x_coeffs, byte_len);
+    buf.extend_from_slice(b",\"y\":");
+    write_ext_field_to_buffer(buf, y_coeffs, byte_len);
+    buf.push(b'}');
 }
 
 /// Convert BigInt to hex string with proper padding for a given bit length
@@ -334,7 +429,7 @@ mod tests {
         assert_eq!(bytes, vec![0xDE, 0xAD, 0xBE, 0xEF]);
 
         let hex = bytes_to_hex(&bytes);
-        assert_eq!(hex, "DEADBEEF");
+        assert_eq!(hex, "deadbeef"); // bytes_to_hex returns lowercase
     }
 
     #[test]

@@ -1,14 +1,12 @@
 use crate::bigint::BigInt;
-use std::cell::RefCell;
 use std::cmp::Ordering;
 
 /// Montgomery context for a fixed modulus.
 /// Supports Montgomery multiplication and exponentiation.
 pub struct MontgomeryCtx<const N: usize> {
     pub modulus: BigInt<N>,
-    n0: u64,                    // n0 = -m^{-1} mod 2^64
-    r2: BigInt<N>,              // R^2 mod m, where R = 2^(64N)
-    scratch: RefCell<Vec<u64>>, // reusable buffer of length N+1
+    n0: u64,       // n0 = -m^{-1} mod 2^64
+    r2: BigInt<N>, // R^2 mod m, where R = 2^(64N)
 }
 
 impl<const N: usize> MontgomeryCtx<N> {
@@ -23,14 +21,8 @@ impl<const N: usize> MontgomeryCtx<N> {
 
         let n0 = mont_n0(modulus.limbs()[0]);
         let r2 = compute_r2::<N>(&modulus);
-        let scratch = RefCell::new(vec![0u64; N + 1]);
 
-        Some(Self {
-            modulus,
-            n0,
-            r2,
-            scratch,
-        })
+        Some(Self { modulus, n0, r2 })
     }
 
     /// Convert x (normal) into Montgomery domain: x*R mod m
@@ -78,80 +70,76 @@ impl<const N: usize> MontgomeryCtx<N> {
     /// Requirements:
     /// - modulus is odd
     /// - a,b are in [0, m)
+    /// 
+    /// Uses a linear array with explicit shifting to avoid circular buffer overhead.
+    #[inline(always)]
     pub fn mont_mul(&self, a: &BigInt<N>, b: &BigInt<N>) -> BigInt<N> {
+        self.mont_mul_internal(a, b, false)
+    }
+    
+    /// Internal mont_mul with optional debug
+    fn mont_mul_internal(&self, a: &BigInt<N>, b: &BigInt<N>, _debug: bool) -> BigInt<N> {
         debug_assert!((self.modulus.limbs()[0] & 1) == 1);
 
-        // Reuse scratch buffer to avoid per-call allocation.
-        let mut t = self.scratch.borrow_mut();
-        t.fill(0);
-        let len = N + 1;
-        let mut head = 0usize; // logical index 0 within t
+        // Use stack-allocated array for the accumulator
+        // We need N+1 limbs but Rust const generics don't allow N+1 yet
+        // Use 65 which is enough for all practical cases (up to 64 limbs = 4096 bits)
+        let mut t = [0u64; 65];
 
-        let m = &self.modulus;
+        let m_limbs = self.modulus.limbs();
+        let a_limbs = a.limbs();
+        let b_limbs = b.limbs();
         let n0 = self.n0;
 
-        for i in 0..N {
+        for &bi in b_limbs.iter().take(N) {
             // 1) t += a * b[i]
-            let bi = b.limbs()[i];
-            let mut carry: u128 = 0;
+            let mut carry: u64 = 0;
             for j in 0..N {
-                let idx = head + j;
-                let idx = if idx >= len { idx - len } else { idx };
-                let uv = (t[idx] as u128) + (a.limbs()[j] as u128) * (bi as u128) + carry;
-                t[idx] = uv as u64;
-                carry = uv >> 64;
+                let (lo, hi) = mul_add_carry(a_limbs[j], bi, t[j], carry);
+                t[j] = lo;
+                carry = hi;
             }
-            // add carry into t[N]
-            let idx_n = head + N;
-            let idx_n = if idx_n >= len { idx_n - len } else { idx_n };
-            t[idx_n] = t[idx_n].wrapping_add(carry as u64);
+            // Propagate carry into t[N]
+            let sum = (t[N] as u128) + (carry as u128);
+            t[N] = sum as u64;
 
             // 2) m_i = t[0] * n0 mod 2^64
-            let mi = t[head].wrapping_mul(n0);
+            let mi = t[0].wrapping_mul(n0);
 
-            // 3) t += mi * m
-            carry = 0;
-            for j in 0..N {
-                let idx = head + j;
-                let idx = if idx >= len { idx - len } else { idx };
-                let uv = (t[idx] as u128) + (mi as u128) * (m.limbs()[j] as u128) + carry;
-                t[idx] = uv as u64;
-                carry = uv >> 64;
+            // 3) t += mi * m, then shift right by 64 bits
+            // First handle j=0: lo0 should be 0 (that's the point of Montgomery reduction)
+            let (_lo0, hi0) = mul_add_carry(m_limbs[0], mi, t[0], 0);
+            let mut carry = hi0;
+            
+            for j in 1..N {
+                let (lo, hi) = mul_add_carry(m_limbs[j], mi, t[j], carry);
+                t[j - 1] = lo;
+                carry = hi;
             }
-            let idx_n = head + N;
-            let idx_n = if idx_n >= len { idx_n - len } else { idx_n };
-            t[idx_n] = t[idx_n].wrapping_add(carry as u64);
-
-            // 4) Logical shift: advance head by 1 and zero new top limb
-            head += 1;
-            if head == len {
-                head = 0;
-            }
-            let idx_top = head + N;
-            let idx_top = if idx_top >= len {
-                idx_top - len
-            } else {
-                idx_top
-            };
-            t[idx_top] = 0;
+            // Handle t[N] + carry
+            let sum = (t[N] as u128) + (carry as u128);
+            t[N - 1] = sum as u64;
+            t[N] = (sum >> 64) as u64;
         }
 
-        // Conditional subtraction: if t >= m, subtract once.
-        // Here t is only N limbs effectively (t[N] == 0 after shifting),
-        // but we keep the robust check.
+        // Copy result to output limbs
         let mut limbs = [0u64; N];
-        for (k, limb) in limbs.iter_mut().enumerate().take(N) {
-            let idx = head + k;
-            let idx = if idx >= len { idx - len } else { idx };
-            *limb = t[idx];
-        }
+        limbs[..N].copy_from_slice(&t[..N]);
         let mut out = BigInt::<N>::from_limbs_internal(limbs);
 
-        if out.compare(m) != Ordering::Less {
-            out = out.sub_with_borrow(m).0;
+        // Conditional subtraction: if t >= m, subtract once
+        // t[N] being non-zero means we definitely need to subtract
+        if t[N] != 0 || out.compare(&self.modulus) != Ordering::Less {
+            out = out.sub_with_borrow(&self.modulus).0;
         }
 
         out
+    }
+    
+    /// Debug version of mont_mul that prints intermediate values
+    #[allow(dead_code)]
+    pub fn mont_mul_debug(&self, a: &BigInt<N>, b: &BigInt<N>) -> BigInt<N> {
+        self.mont_mul_internal(a, b, true)
     }
 
     /// Normal modular multiplication using Montgomery under the hood.
@@ -211,13 +199,23 @@ impl<const N: usize> MontgomeryCtx<N> {
     }
 }
 
+/// Compute a*b + c + d, returning (lo, hi) where result = lo + hi*2^64
+/// This is the core operation for Montgomery multiplication.
+#[inline(always)]
+fn mul_add_carry(a: u64, b: u64, c: u64, d: u64) -> (u64, u64) {
+    let product = (a as u128) * (b as u128) + (c as u128) + (d as u128);
+    (product as u64, (product >> 64) as u64)
+}
+
 /// Compute n0 = -m^{-1} mod 2^64 (requires m odd).
+#[inline(always)]
 fn mont_n0(m0: u64) -> u64 {
     debug_assert!(m0 & 1 == 1);
     inv_mod_2_64_odd(m0).wrapping_neg()
 }
 
 /// Inverse of odd a modulo 2^64 using Newton iteration.
+#[inline(always)]
 fn inv_mod_2_64_odd(a: u64) -> u64 {
     debug_assert!(a & 1 == 1);
     // x <- x(2 - ax) mod 2^64
@@ -264,5 +262,30 @@ mod tests {
         let new = ctx.mod_mul(&a, &b);
 
         assert_eq!(old, new);
+    }
+    
+    #[test]
+    fn montgomery_z_squared() {
+        // The failing case from ECP debugging - tests the t[N] overflow fix
+        type B = BigInt<4>;
+        let m = B::from_hex("ffffffff00000001000000000000000000000000ffffffffffffffffffffffff");
+        let ctx = MontgomeryCtx::<4>::new(m).unwrap();
+        
+        // Z² value that previously failed when squared
+        let z_sq = B::from_hex("710b36fcf4c72e5b8d0cf5ae66f613bf56bda4a8d9f16260c2439ee0ca8cf0fd");
+        
+        // Expected Z⁴ = Z² * Z² using standard mod_mul
+        let z_4_expected = z_sq.mod_mul(&z_sq, &m);
+        
+        // Convert z_sq to Montgomery domain
+        let z_sq_mont = ctx.to_mont(&z_sq);
+        
+        // Montgomery Z⁴ in Montgomery domain
+        let z_4_mont_domain = ctx.mont_mul(&z_sq_mont, &z_sq_mont);
+        
+        // Convert back and compare
+        let z_4_mont = ctx.from_mont(&z_4_mont_domain);
+        
+        assert_eq!(z_4_expected, z_4_mont, "Montgomery Z⁴ mismatch!");
     }
 }
