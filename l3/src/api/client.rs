@@ -28,6 +28,9 @@ impl CryptoApiClient {
     pub fn new() -> Self {
         let client = Client::builder()
             .timeout(Duration::from_secs(30))
+            .tcp_nodelay(true)              // Disable Nagle's algorithm for lower latency
+            .pool_max_idle_per_host(4)      // Keep more connections ready
+            .http2_adaptive_window(true)    // Enable HTTP/2 with adaptive flow control
             .build()
             .expect("Failed to create HTTP client");
 
@@ -47,6 +50,9 @@ impl CryptoApiClient {
     pub fn with_base_url(base_url: &str) -> Self {
         let client = Client::builder()
             .timeout(Duration::from_secs(30))
+            .tcp_nodelay(true)              // Disable Nagle's algorithm for lower latency
+            .pool_max_idle_per_host(4)      // Keep more connections ready
+            .http2_adaptive_window(true)    // Enable HTTP/2 with adaptive flow control
             .build()
             .expect("Failed to create HTTP client");
 

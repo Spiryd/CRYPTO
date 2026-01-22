@@ -578,6 +578,10 @@ impl ChallengeTestRunner {
             let coeff = result[i];
             if !coeff.is_zero() {
                 for j in 0..k {
+                    // Skip zero coefficients in modulus (BN254 has mostly zeros)
+                    if modulus_poly[j].is_zero() {
+                        continue;
+                    }
                     let sub_term = coeff.mod_mul(&modulus_poly[j], prime);
                     result[i - k + j] = result[i - k + j].mod_sub(&sub_term, prime);
                 }

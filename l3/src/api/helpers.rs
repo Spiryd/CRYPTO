@@ -128,14 +128,10 @@ pub fn write_ec_ext_point_to_buffer<const N: usize>(
 }
 
 /// Convert BigInt to hex string with proper padding for a given bit length
+/// Optimized: pre-allocates exact size, no intermediate allocations
 pub fn bigint_to_hex_padded<const N: usize>(value: &BigInt<N>, target_bits: usize) -> String {
-    let hex = value.to_hex();
-    let target_len = target_bits.div_ceil(8) * 2;
-    if hex.len() < target_len {
-        format!("{:0>width$}", hex, width = target_len)
-    } else {
-        hex
-    }
+    let byte_len = target_bits.div_ceil(8);
+    bigint_to_padded_hex(value, byte_len)
 }
 
 /// Generate a random BigInt in range [1, max-1] using rejection sampling
@@ -397,26 +393,63 @@ pub fn hash_to_scalar<const N: usize>(hash: &[u8], order: &BigInt<N>) -> BigInt<
 }
 
 /// Convert BigInt to padded hex string (lowercase)
+/// Optimized: pre-allocates exact size, no intermediate allocations
 pub fn bigint_to_padded_hex<const N: usize>(value: &BigInt<N>, byte_len: usize) -> String {
-    let hex = value.to_hex();
+    const HEX_CHARS: &[u8; 16] = b"0123456789abcdef";
     let target_len = byte_len * 2;
-    if hex.len() < target_len {
-        format!("{:0>width$}", hex, width = target_len).to_lowercase()
-    } else {
-        hex.to_lowercase()
+    
+    // Pre-allocate exact size needed
+    let mut result = String::with_capacity(target_len);
+    
+    let bytes = value.to_be_bytes();
+    let total_bytes = bytes.len();
+    let skip = total_bytes.saturating_sub(byte_len);
+    let significant_bytes = &bytes[skip..];
+    let padding_needed = byte_len.saturating_sub(significant_bytes.len());
+    
+    // Write leading zeros for padding
+    for _ in 0..padding_needed {
+        result.push('0');
+        result.push('0');
     }
+    
+    // Write actual hex digits (already lowercase from HEX_CHARS)
+    for &byte in significant_bytes {
+        result.push(HEX_CHARS[(byte >> 4) as usize] as char);
+        result.push(HEX_CHARS[(byte & 0x0F) as usize] as char);
+    }
+    
+    result
 }
 
 /// Convert BigInt to padded hex string (uppercase)
+/// Optimized: pre-allocates exact size, no intermediate allocations
 pub fn bigint_to_padded_hex_upper<const N: usize>(value: &BigInt<N>, byte_len: usize) -> String {
-    let hex = value.to_hex();
+    const HEX_CHARS: &[u8; 16] = b"0123456789ABCDEF";
     let target_len = byte_len * 2;
-    let padded = if hex.len() < target_len {
-        format!("{:0>width$}", hex, width = target_len)
-    } else {
-        hex
-    };
-    padded.to_uppercase()
+    
+    // Pre-allocate exact size needed
+    let mut result = String::with_capacity(target_len);
+    
+    let bytes = value.to_be_bytes();
+    let total_bytes = bytes.len();
+    let skip = total_bytes.saturating_sub(byte_len);
+    let significant_bytes = &bytes[skip..];
+    let padding_needed = byte_len.saturating_sub(significant_bytes.len());
+    
+    // Write leading zeros for padding
+    for _ in 0..padding_needed {
+        result.push('0');
+        result.push('0');
+    }
+    
+    // Write actual hex digits (already uppercase from HEX_CHARS)
+    for &byte in significant_bytes {
+        result.push(HEX_CHARS[(byte >> 4) as usize] as char);
+        result.push(HEX_CHARS[(byte & 0x0F) as usize] as char);
+    }
+    
+    result
 }
 
 #[cfg(test)]

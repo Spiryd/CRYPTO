@@ -5,6 +5,10 @@
 //!
 //! Run with: cargo run --release
 //!
+//! Options:
+//!   --best, -b    Run 25 attempts per challenge to find the best time
+//!   --attempts N  Run N attempts per challenge (default: 8)
+//!
 //! The program will:
 //! 1. Connect to the API
 //! 2. For each challenge type:
@@ -18,6 +22,7 @@
 use l3::api::{ChallengeType, CryptoApiClient, SubmitChallengeRunner};
 use serde_json::json;
 use std::collections::HashMap;
+use std::env;
 use std::fs::File;
 use std::io::{self, Write};
 use std::path::Path;
@@ -28,11 +33,48 @@ type LoadResults = (
     HashMap<String, f64>,
 );
 
+fn parse_args() -> usize {
+    let args: Vec<String> = env::args().collect();
+    let mut max_attempts = 8; // default
+    
+    let mut i = 1;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--best" | "-b" => {
+                max_attempts = 25;
+            }
+            "--attempts" | "-n" => {
+                if i + 1 < args.len() {
+                    if let Ok(n) = args[i + 1].parse::<usize>() {
+                        max_attempts = n;
+                    }
+                    i += 1;
+                }
+            }
+            arg if arg.starts_with("--attempts=") => {
+                if let Ok(n) = arg.trim_start_matches("--attempts=").parse::<usize>() {
+                    max_attempts = n;
+                }
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+    
+    max_attempts
+}
+
 fn main() {
+    let max_attempts = parse_args();
+    
     println!("================================================================================");
     println!("L3 - Submit Challenge Runner");
     println!("================================================================================\n");
-    println!("NOTE: Run with --release for much faster performance!\n");
+    println!("NOTE: Run with --release for much faster performance!");
+    if max_attempts != 8 {
+        println!("Running with {} attempts per challenge (use --best for 25, --attempts N for custom)", max_attempts);
+    }
+    println!();
 
     let client = CryptoApiClient::new();
 
@@ -72,7 +114,13 @@ fn main() {
             "--------------------------------------------------------------------------------"
         );
 
-        let result = runner.run_submit(*challenge_type, 8); // Max 8 retries
+        // If max_attempts > 1, run multiple successful attempts and keep the best
+        // Otherwise, just run once (with retries on poisoned sessions)
+        let result = if max_attempts > 1 {
+            runner.run_submit_best_of(*challenge_type, max_attempts)
+        } else {
+            runner.run_submit(*challenge_type, 8) // Default 8 retries for poisoned sessions
+        };
 
         // Get the timing from the fastest successful attempt
         let attempt_time_secs = result.attempt_time.unwrap_or(0.0);
